@@ -17,6 +17,114 @@ import (
 	"github.com/ogen-go/ogen/location"
 )
 
+// collectStructFieldNames collects all JSON field names from a type.
+// For KindStruct, it returns the struct's own JSON field names.
+// For KindSum, it returns the intersection of field names across all leaf struct variants,
+// since any sub-variant could be the actual JSON object and we need fields guaranteed to be present.
+// For other kinds, it returns nil.
+func collectStructFieldNames(t *ir.Type) map[string]struct{} {
+	switch {
+	case t.Is(ir.KindStruct):
+		fields := make(map[string]struct{})
+		for _, f := range t.JSON().Fields() {
+			fields[f.Tag.JSON] = struct{}{}
+		}
+		return fields
+	case t.IsSum():
+		// For sum types, collect the intersection of fields across all sub-variants.
+		// We need fields that are present in ALL sub-variants so we can reliably
+		// detect this variant regardless of which sub-variant appears.
+		var result map[string]struct{}
+		for _, sub := range t.SumOf {
+			subFields := collectStructFieldNames(sub)
+			if subFields == nil {
+				continue
+			}
+			if result == nil {
+				result = make(map[string]struct{})
+				for k, v := range subFields {
+					result[k] = v
+				}
+				continue
+			}
+			// Intersect: keep only fields present in both sets.
+			for k := range result {
+				if _, ok := subFields[k]; !ok {
+					delete(result, k)
+				}
+			}
+		}
+		return result
+	default:
+		return nil
+	}
+}
+
+// collectStructFields collects all JSON fields from a type.
+// For KindStruct, returns the struct's fields directly.
+// For KindSum, returns synthetic fields representing the intersection of field names
+// across all leaf struct variants. The returned fields are taken from the first
+// sub-variant that contains each field name.
+func collectStructFields(t *ir.Type) ir.JSONFields {
+	if t.Is(ir.KindStruct) {
+		return t.JSON().Fields()
+	}
+	if !t.IsSum() {
+		return nil
+	}
+
+	// Get the intersection of field names.
+	nameSet := collectStructFieldNames(t)
+	if nameSet == nil {
+		return nil
+	}
+
+	// Collect actual Field pointers from sub-variants for the intersected names.
+	// Use the first occurrence of each field name found in any sub-variant.
+	seen := make(map[string]struct{})
+	var fields ir.JSONFields
+	for _, sub := range t.SumOf {
+		var subFields ir.JSONFields
+		if sub.Is(ir.KindStruct) {
+			subFields = sub.JSON().Fields()
+		} else if sub.IsSum() {
+			subFields = collectStructFields(sub)
+		}
+		for _, f := range subFields {
+			if _, ok := nameSet[f.Tag.JSON]; !ok {
+				continue
+			}
+			if _, ok := seen[f.Tag.JSON]; ok {
+				continue
+			}
+			seen[f.Tag.JSON] = struct{}{}
+			fields = append(fields, f)
+		}
+		if len(seen) == len(nameSet) {
+			break
+		}
+	}
+	return fields
+}
+
+// canInferFieldDiscriminator returns true if the given type can participate in
+// field-based discriminator inference (i.e., it is a struct or a sum type whose
+// sub-variants are all structs or recursively eligible sum types).
+func canInferFieldDiscriminator(t *ir.Type) bool {
+	if t.Is(ir.KindStruct) {
+		return true
+	}
+	if !t.IsSum() {
+		return false
+	}
+	for _, sub := range t.SumOf {
+		if !canInferFieldDiscriminator(sub) {
+			return false
+		}
+	}
+	return true
+}
+
 func canUseTypeDiscriminator(sum []*ir.Type, isOneOf bool) bool {
 	var (
 		// Collect map of variant kinds.
@@ -432,14 +540,15 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 
 	for _, s := range sum.SumOf {
 		uniq[s.Name] = map[string]struct{}{}
-		if !s.Is(ir.KindStruct) {
+		if !canInferFieldDiscriminator(s) {
 			return nil, errors.Wrapf(&ErrNotImplemented{Name: "discriminator inference"},
 				"oneOf %s: variant %s: no unique fields, "+
 					"unable to parse without discriminator", sum.Name, s.Name,
 			)
 		}
-		for _, f := range s.JSON().Fields() {
-			uniq[s.Name][f.Tag.JSON] = struct{}{}
+		fieldNames := collectStructFieldNames(s)
+		for name := range fieldNames {
+			uniq[s.Name][name] = struct{}{}
 		}
 	}
 	{
@@ -489,7 +598,7 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 			// Collect field -> variant mapping to compute fields used by multiple variants.
 			fieldToVariants := map[string]map[*ir.Type]struct{}{}
 			for _, variant := range sum.SumOf {
-				for _, f := range variant.JSON().Fields() {
+				for _, f := range collectStructFields(variant) {
 					m, ok := fieldToVariants[f.Tag.JSON]
 					if !ok {
 						m = map[*ir.Type]struct{}{}
@@ -507,7 +616,7 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 				}
 
 				fields := map[string][]*ir.Type{}
-				for _, f := range variant.JSON().Fields() {
+				for _, f := range collectStructFields(variant) {
 					for typ := range fieldToVariants[f.Tag.JSON] {
 						if typ == variant {
 							continue
@@ -552,7 +661,7 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 			if len(s.SumSpec.Unique) > 0 {
 				continue
 			}
-			for _, f := range s.JSON().Fields() {
+			for _, f := range collectStructFields(s) {
 				if !slices.Contains(v.Unique, f.Tag.JSON) {
 					continue
 				}

@@ -7470,8 +7470,8 @@ func (s *ExampleOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "summary":
-				match := ExampleExampleOrReference
+			case "$ref":
+				match := ReferenceExampleOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -7479,14 +7479,6 @@ func (s *ExampleOrReference) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "description":
-				match := ExampleExampleOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "value":
 				match := ExampleExampleOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -7502,8 +7494,16 @@ func (s *ExampleOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "$ref":
-				match := ReferenceExampleOrReference
+			case "summary":
+				match := ExampleExampleOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "value":
+				match := ExampleExampleOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -8233,24 +8233,8 @@ func (s *HeaderOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "description":
-				match := HeaderHeaderOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "required":
-				match := HeaderHeaderOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "deprecated":
-				match := HeaderHeaderOrReference
+			case "$ref":
+				match := ReferenceHeaderOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -8258,22 +8242,6 @@ func (s *HeaderOrReference) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "allowEmptyValue":
-				match := HeaderHeaderOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "style":
-				match := HeaderHeaderOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "explode":
 				match := HeaderHeaderOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -8289,7 +8257,23 @@ func (s *HeaderOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "schema":
+			case "content":
+				match := HeaderHeaderOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "deprecated":
+				match := HeaderHeaderOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "description":
 				match := HeaderHeaderOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -8313,7 +8297,7 @@ func (s *HeaderOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "content":
+			case "explode":
 				match := HeaderHeaderOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -8321,8 +8305,24 @@ func (s *HeaderOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "$ref":
-				match := ReferenceHeaderOrReference
+			case "required":
+				match := HeaderHeaderOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "schema":
+				match := HeaderHeaderOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "style":
+				match := HeaderHeaderOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -9153,7 +9153,15 @@ func (s *LinkOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "operationRef":
+			case "$ref":
+				match := ReferenceLinkOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "description":
 				match := LinkLinkOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -9162,6 +9170,14 @@ func (s *LinkOrReference) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "operationId":
+				match := LinkLinkOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "operationRef":
 				match := LinkLinkOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -9185,24 +9201,8 @@ func (s *LinkOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "description":
-				match := LinkLinkOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
 			case "server":
 				match := LinkLinkOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "$ref":
-				match := ReferenceLinkOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -12391,40 +12391,8 @@ func (s *ParameterOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "name":
-				match := ParameterParameterOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "in":
-				match := ParameterParameterOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "description":
-				match := ParameterParameterOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "required":
-				match := ParameterParameterOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "deprecated":
-				match := ParameterParameterOrReference
+			case "$ref":
+				match := ReferenceParameterOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -12432,22 +12400,6 @@ func (s *ParameterOrReference) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "allowEmptyValue":
-				match := ParameterParameterOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "style":
-				match := ParameterParameterOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "explode":
 				match := ParameterParameterOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -12463,7 +12415,23 @@ func (s *ParameterOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "schema":
+			case "content":
+				match := ParameterParameterOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "deprecated":
+				match := ParameterParameterOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "description":
 				match := ParameterParameterOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -12487,7 +12455,7 @@ func (s *ParameterOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "content":
+			case "explode":
 				match := ParameterParameterOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -12495,8 +12463,40 @@ func (s *ParameterOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "$ref":
-				match := ReferenceParameterOrReference
+			case "in":
+				match := ParameterParameterOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "name":
+				match := ParameterParameterOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "required":
+				match := ParameterParameterOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "schema":
+				match := ParameterParameterOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "style":
+				match := ParameterParameterOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -13712,8 +13712,8 @@ func (s *RequestBodyOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "description":
-				match := RequestBodyRequestBodyOrReference
+			case "$ref":
+				match := ReferenceRequestBodyOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -13728,7 +13728,7 @@ func (s *RequestBodyOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "required":
+			case "description":
 				match := RequestBodyRequestBodyOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -13736,8 +13736,8 @@ func (s *RequestBodyOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "$ref":
-				match := ReferenceRequestBodyOrReference
+			case "required":
+				match := RequestBodyRequestBodyOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -14048,6 +14048,22 @@ func (s *ResponseOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "$ref":
+				match := ReferenceResponseOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "content":
+				match := ResponseResponseOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "description":
 				match := ResponseResponseOrReference
 				if found && s.Type != match {
@@ -14064,24 +14080,8 @@ func (s *ResponseOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "content":
-				match := ResponseResponseOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
 			case "links":
 				match := ResponseResponseOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "$ref":
-				match := ReferenceResponseOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -15253,7 +15253,55 @@ func (s *SchemaOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "nullable":
+			case "$ref":
+				match := ReferenceSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "additionalProperties":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "allOf":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "anyOf":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "default":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "deprecated":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "description":
 				match := SchemaSchemaOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -15269,7 +15317,207 @@ func (s *SchemaOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
+			case "enum":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "example":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "exclusiveMaximum":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "exclusiveMinimum":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "externalDocs":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "format":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "items":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "maxItems":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "maxLength":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "maxProperties":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "maximum":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "minItems":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "minLength":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "minProperties":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "minimum":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "multipleOf":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "not":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "nullable":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "oneOf":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "pattern":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "properties":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "readOnly":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "required":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "title":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "type":
+				match := SchemaSchemaOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "uniqueItems":
 				match := SchemaSchemaOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -15287,254 +15535,6 @@ func (s *SchemaOrReference) Decode(d *jx.Decoder) error {
 				s.Type = match
 			case "xml":
 				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "externalDocs":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "example":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "deprecated":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "title":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "multipleOf":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "maximum":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "exclusiveMaximum":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "minimum":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "exclusiveMinimum":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "maxLength":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "minLength":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "pattern":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "maxItems":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "minItems":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "uniqueItems":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "maxProperties":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "minProperties":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "required":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "enum":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "type":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "allOf":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "oneOf":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "anyOf":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "not":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "items":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "properties":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "additionalProperties":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "default":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "description":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "format":
-				match := SchemaSchemaOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "$ref":
-				match := ReferenceSchemaOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -16149,7 +16149,15 @@ func (s *SecuritySchemeOrReference) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "type":
+			case "$ref":
+				match := ReferenceSecuritySchemeOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "bearerFormat":
 				match := SecuritySchemeSecuritySchemeOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -16165,7 +16173,7 @@ func (s *SecuritySchemeOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "name":
+			case "flows":
 				match := SecuritySchemeSecuritySchemeOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -16181,23 +16189,7 @@ func (s *SecuritySchemeOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "scheme":
-				match := SecuritySchemeSecuritySchemeOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "bearerFormat":
-				match := SecuritySchemeSecuritySchemeOrReference
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "flows":
+			case "name":
 				match := SecuritySchemeSecuritySchemeOrReference
 				if found && s.Type != match {
 					s.Type = ""
@@ -16213,8 +16205,16 @@ func (s *SecuritySchemeOrReference) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "$ref":
-				match := ReferenceSecuritySchemeOrReference
+			case "scheme":
+				match := SecuritySchemeSecuritySchemeOrReference
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "type":
+				match := SecuritySchemeSecuritySchemeOrReference
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)

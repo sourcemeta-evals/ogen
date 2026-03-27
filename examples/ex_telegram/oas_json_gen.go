@@ -6432,6 +6432,14 @@ func (s *CopyMessageReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplyCopyMessageReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupCopyMessageReplyMarkup
 				if found && s.Type != match {
@@ -6441,14 +6449,6 @@ func (s *CopyMessageReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupCopyMessageReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupCopyMessageReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -6472,8 +6472,8 @@ func (s *CopyMessageReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplyCopyMessageReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupCopyMessageReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -21259,15 +21259,31 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "message_text":
-				match := InputTextMessageContentInputMessageContent
+			case "address":
+				match := InputVenueMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
 				}
 				found = true
 				s.Type = match
-			case "parse_mode":
+			case "currency":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "description":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "disable_web_page_preview":
 				match := InputTextMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
@@ -21283,48 +21299,8 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "disable_web_page_preview":
-				match := InputTextMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "horizontal_accuracy":
-				match := InputLocationMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "live_period":
-				match := InputLocationMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "heading":
-				match := InputLocationMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "proximity_alert_radius":
-				match := InputLocationMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "address":
-				match := InputVenueMessageContentInputMessageContent
+			case "first_name":
+				match := InputContactMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -21363,16 +21339,24 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "phone_number":
-				match := InputContactMessageContentInputMessageContent
+			case "heading":
+				match := InputLocationMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
 				}
 				found = true
 				s.Type = match
-			case "first_name":
-				match := InputContactMessageContentInputMessageContent
+			case "horizontal_accuracy":
+				match := InputLocationMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "is_flexible":
+				match := InputInvoiceMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -21387,48 +21371,8 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "vcard":
-				match := InputContactMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "description":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "payload":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "provider_token":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "currency":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "prices":
-				match := InputInvoiceMessageContentInputMessageContent
+			case "live_period":
+				match := InputLocationMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -21443,47 +21387,15 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "suggested_tip_amounts":
-				match := InputInvoiceMessageContentInputMessageContent
+			case "message_text":
+				match := InputTextMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
 				}
 				found = true
 				s.Type = match
-			case "provider_data":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "photo_url":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "photo_size":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "photo_width":
-				match := InputInvoiceMessageContentInputMessageContent
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "photo_height":
+			case "need_email":
 				match := InputInvoiceMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
@@ -21507,7 +21419,7 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "need_email":
+			case "need_shipping_address":
 				match := InputInvoiceMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
@@ -21515,7 +21427,95 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "need_shipping_address":
+			case "parse_mode":
+				match := InputTextMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "payload":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "phone_number":
+				match := InputContactMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "photo_height":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "photo_size":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "photo_url":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "photo_width":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "prices":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "provider_data":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "provider_token":
+				match := InputInvoiceMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "proximity_alert_radius":
+				match := InputLocationMessageContentInputMessageContent
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "send_email_to_provider":
 				match := InputInvoiceMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
@@ -21531,7 +21531,7 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "send_email_to_provider":
+			case "suggested_tip_amounts":
 				match := InputInvoiceMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
@@ -21539,8 +21539,8 @@ func (s *InputMessageContent) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "is_flexible":
-				match := InputInvoiceMessageContentInputMessageContent
+			case "vcard":
+				match := InputContactMessageContentInputMessageContent
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -34298,6 +34298,14 @@ func (s *SendAnimationReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendAnimationReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendAnimationReplyMarkup
 				if found && s.Type != match {
@@ -34307,14 +34315,6 @@ func (s *SendAnimationReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendAnimationReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendAnimationReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -34338,8 +34338,8 @@ func (s *SendAnimationReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendAnimationReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendAnimationReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -34742,6 +34742,14 @@ func (s *SendAudioReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendAudioReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendAudioReplyMarkup
 				if found && s.Type != match {
@@ -34751,14 +34759,6 @@ func (s *SendAudioReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendAudioReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendAudioReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -34782,8 +34782,8 @@ func (s *SendAudioReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendAudioReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendAudioReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -35218,6 +35218,14 @@ func (s *SendContactReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendContactReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendContactReplyMarkup
 				if found && s.Type != match {
@@ -35227,14 +35235,6 @@ func (s *SendContactReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendContactReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendContactReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -35258,8 +35258,8 @@ func (s *SendContactReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendContactReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendContactReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -35531,6 +35531,14 @@ func (s *SendDiceReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendDiceReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendDiceReplyMarkup
 				if found && s.Type != match {
@@ -35540,14 +35548,6 @@ func (s *SendDiceReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendDiceReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendDiceReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -35571,8 +35571,8 @@ func (s *SendDiceReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendDiceReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendDiceReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -35941,6 +35941,14 @@ func (s *SendDocumentReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendDocumentReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendDocumentReplyMarkup
 				if found && s.Type != match {
@@ -35950,14 +35958,6 @@ func (s *SendDocumentReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendDocumentReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendDocumentReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -35981,8 +35981,8 @@ func (s *SendDocumentReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendDocumentReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendDocumentReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -37066,6 +37066,14 @@ func (s *SendLocationReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendLocationReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendLocationReplyMarkup
 				if found && s.Type != match {
@@ -37075,14 +37083,6 @@ func (s *SendLocationReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendLocationReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendLocationReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -37106,8 +37106,8 @@ func (s *SendLocationReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendLocationReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendLocationReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -37904,6 +37904,14 @@ func (s *SendMessageReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendMessageReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendMessageReplyMarkup
 				if found && s.Type != match {
@@ -37913,14 +37921,6 @@ func (s *SendMessageReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendMessageReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendMessageReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -37944,8 +37944,8 @@ func (s *SendMessageReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendMessageReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendMessageReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -38280,6 +38280,14 @@ func (s *SendPhotoReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendPhotoReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendPhotoReplyMarkup
 				if found && s.Type != match {
@@ -38289,14 +38297,6 @@ func (s *SendPhotoReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendPhotoReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendPhotoReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -38320,8 +38320,8 @@ func (s *SendPhotoReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendPhotoReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendPhotoReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -38805,6 +38805,14 @@ func (s *SendPollReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendPollReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendPollReplyMarkup
 				if found && s.Type != match {
@@ -38814,14 +38822,6 @@ func (s *SendPollReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendPollReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendPollReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -38845,8 +38845,8 @@ func (s *SendPollReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendPollReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendPollReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -39118,6 +39118,14 @@ func (s *SendStickerReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendStickerReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendStickerReplyMarkup
 				if found && s.Type != match {
@@ -39127,14 +39135,6 @@ func (s *SendStickerReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendStickerReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendStickerReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -39158,8 +39158,8 @@ func (s *SendStickerReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendStickerReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendStickerReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -39551,6 +39551,14 @@ func (s *SendVenueReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendVenueReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendVenueReplyMarkup
 				if found && s.Type != match {
@@ -39560,14 +39568,6 @@ func (s *SendVenueReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendVenueReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendVenueReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -39591,8 +39591,8 @@ func (s *SendVenueReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendVenueReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendVenueReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -40243,6 +40243,14 @@ func (s *SendVideoNoteReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendVideoNoteReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendVideoNoteReplyMarkup
 				if found && s.Type != match {
@@ -40252,14 +40260,6 @@ func (s *SendVideoNoteReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendVideoNoteReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendVideoNoteReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -40283,8 +40283,8 @@ func (s *SendVideoNoteReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendVideoNoteReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendVideoNoteReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -40377,6 +40377,14 @@ func (s *SendVideoReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendVideoReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendVideoReplyMarkup
 				if found && s.Type != match {
@@ -40386,14 +40394,6 @@ func (s *SendVideoReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendVideoReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendVideoReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -40417,8 +40417,8 @@ func (s *SendVideoReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendVideoReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendVideoReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -40770,6 +40770,14 @@ func (s *SendVoiceReplyMarkup) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "force_reply":
+				match := ForceReplySendVoiceReplyMarkup
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "inline_keyboard":
 				match := InlineKeyboardMarkupSendVoiceReplyMarkup
 				if found && s.Type != match {
@@ -40779,14 +40787,6 @@ func (s *SendVoiceReplyMarkup) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "keyboard":
-				match := ReplyKeyboardMarkupSendVoiceReplyMarkup
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "resize_keyboard":
 				match := ReplyKeyboardMarkupSendVoiceReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
@@ -40810,8 +40810,8 @@ func (s *SendVoiceReplyMarkup) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "force_reply":
-				match := ForceReplySendVoiceReplyMarkup
+			case "resize_keyboard":
+				match := ReplyKeyboardMarkupSendVoiceReplyMarkup
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)

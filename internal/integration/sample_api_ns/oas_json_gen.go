@@ -605,7 +605,7 @@ func (s *DataDescription) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "name":
+			case "count":
 				match := DescriptionDetailedDataDescription
 				if found && s.Type != match {
 					s.Type = ""
@@ -613,8 +613,8 @@ func (s *DataDescription) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "count":
-				match := DescriptionDetailedDataDescription
+			case "description":
+				match := DescriptionSimpleDataDescription
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -629,8 +629,8 @@ func (s *DataDescription) Decode(d *jx.Decoder) error {
 				}
 				found = true
 				s.Type = match
-			case "description":
-				match := DescriptionSimpleDataDescription
+			case "name":
+				match := DescriptionDetailedDataDescription
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -1941,16 +1941,16 @@ func (s *InlineUniqueFieldsOneOfSum) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "foo":
-				match := InlineOneOfFooInlineUniqueFieldsOneOfSum
+			case "bar":
+				match := InlineOneOfBarInlineUniqueFieldsOneOfSum
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
 				}
 				found = true
 				s.Type = match
-			case "bar":
-				match := InlineOneOfBarInlineUniqueFieldsOneOfSum
+			case "foo":
+				match := InlineOneOfFooInlineUniqueFieldsOneOfSum
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
@@ -4591,16 +4591,16 @@ func (s *MergeUniqueFieldsOneOfSum) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "foo":
-				match := InlineOneOfFooMergeUniqueFieldsOneOfSum
+			case "bar":
+				match := InlineOneOfBarMergeUniqueFieldsOneOfSum
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
 				}
 				found = true
 				s.Type = match
-			case "bar":
-				match := InlineOneOfBarMergeUniqueFieldsOneOfSum
+			case "foo":
+				match := InlineOneOfFooMergeUniqueFieldsOneOfSum
 				if found && s.Type != match {
 					s.Type = ""
 					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)

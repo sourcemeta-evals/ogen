@@ -1,3 +1,4 @@
+// Package ogen provides OpenAPI code generation
 package ogen
 
 import (

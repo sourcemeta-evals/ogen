@@ -168439,14 +168439,6 @@ func (s *UsersGetAuthenticatedOK) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "two_factor_authentication":
-				match := PrivateUserUsersGetAuthenticatedOK
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
 			case "business_plus":
 				match := PrivateUserUsersGetAuthenticatedOK
 				if found && s.Type != match {
@@ -168456,6 +168448,14 @@ func (s *UsersGetAuthenticatedOK) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "ldap_dn":
+				match := PrivateUserUsersGetAuthenticatedOK
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "two_factor_authentication":
 				match := PrivateUserUsersGetAuthenticatedOK
 				if found && s.Type != match {
 					s.Type = ""
@@ -168571,14 +168571,6 @@ func (s *UsersGetByUsernameOK) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "two_factor_authentication":
-				match := PrivateUserUsersGetByUsernameOK
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
 			case "business_plus":
 				match := PrivateUserUsersGetByUsernameOK
 				if found && s.Type != match {
@@ -168588,6 +168580,14 @@ func (s *UsersGetByUsernameOK) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "ldap_dn":
+				match := PrivateUserUsersGetByUsernameOK
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "two_factor_authentication":
 				match := PrivateUserUsersGetByUsernameOK
 				if found && s.Type != match {
 					s.Type = ""

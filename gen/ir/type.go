@@ -47,6 +47,9 @@ type SumSpec struct {
 
 	// TypeDiscriminator denotes to distinguish variants by type.
 	TypeDiscriminator bool
+
+	UniqueFieldTypes map[string]string
+	UniqueFields     map[string][]map[string]string
 }
 
 type ResolvedSumSpecMap struct {

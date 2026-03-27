@@ -876,6 +876,33 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 			}
 		}
 
+		// Reject discrimination between structural types (array vs object)
+		// These require deeper inspection beyond simple type checking
+		if uniqueJxTypes["jx.Array"] && uniqueJxTypes["jx.Object"] {
+			var typeIDs []string
+			for _, v := range sortedVariants {
+				for _, s := range sum.SumOf {
+					if s.Name != v.Name {
+						continue
+					}
+					for _, f := range s.JSON().Fields() {
+						if f.Tag.JSON == fieldName {
+							typeID := getFieldTypeID(f.Type)
+							typeIDs = append(typeIDs, fmt.Sprintf("%s: %s", s.Name, typeID))
+							break
+						}
+					}
+				}
+			}
+
+			return nil, errors.Wrapf(
+				&ErrNotImplemented{Name: "structural type discrimination"},
+				"field %q cannot discriminate between array and object types: %v",
+				fieldName,
+				typeIDs,
+			)
+		}
+
 		// If all variants have the same jxType (or empty), we can't discriminate
 		if len(uniqueJxTypes) <= 1 {
 			// Find the type IDs to provide better error message

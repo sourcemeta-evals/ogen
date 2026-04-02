@@ -426,75 +426,27 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 
 	// 4th case: distinguish by unique fields (considering field types).
 
-	const anyTypeID = "any"
-
-	// Inline type ID resolution function
-	var ResolveTypeID func(t *ir.Type) string
-	ResolveTypeID = func(t *ir.Type) string {
-		if t == nil {
-			return anyTypeID
-		}
-		base := t
-		for base.IsGeneric() {
-			if v := base.GenericOf; v != nil {
-				base = v
-				continue
-			}
-			break
-		}
-		switch base.Kind {
-		case ir.KindAny:
-			return anyTypeID
-		case ir.KindPrimitive:
-			switch base.Primitive {
-			case ir.Bool:
-				return "boolean"
-			case ir.Int, ir.Int8, ir.Int16, ir.Int32, ir.Int64,
-				ir.Uint, ir.Uint8, ir.Uint16, ir.Uint32, ir.Uint64:
-				return "integer"
-			case ir.Float32, ir.Float64:
-				return "number"
-			case ir.String, ir.ByteSlice:
-				return "string"
-			case ir.Null:
-				return "null"
-			default:
-				return fmt.Sprintf("primitive_%s", base.Primitive)
-			}
-		case ir.KindArray:
-			itemID := anyTypeID
-			if base.Item != nil {
-				itemID = ResolveTypeID(base.Item)
-			}
-			return fmt.Sprintf("array[%s]", itemID)
-		case ir.KindEnum:
-			return fmt.Sprintf("enum_%s", base.Name)
-		case ir.KindStruct:
-			return "object"
-		case ir.KindMap:
-			itemID := anyTypeID
-			if base.Item != nil {
-				itemID = ResolveTypeID(base.Item)
-			}
-			return fmt.Sprintf("map[%s]", itemID)
-		case ir.KindSum:
-			return "sum"
-		default:
-			return string(base.Kind)
-		}
-	}
+	const (
+		tidAny  = "any"
+		tidBool = "boolean"
+		tidInt  = "integer"
+		tidNum  = "number"
+		tidStr  = "string"
+		tidNull = "null"
+		tidObj  = "object"
+		tidArr  = "array"
+		tidMap  = "map"
+		tidEnum = "enum"
+	)
 
 	typeIDToJx := map[string]string{
-		"boolean": "jx.Bool", "integer": "jx.Number", "number": "jx.Number",
-		"string": "jx.String", "null": "jx.Null", "object": "jx.Object",
+		tidBool: "jx.Bool", tidInt: "jx.Number", tidNum: "jx.Number",
+		tidStr: "jx.String", tidNull: "jx.Null", tidObj: "jx.Object",
+		tidArr: "jx.Array", tidMap: "jx.Object", tidEnum: "jx.String",
 	}
 	MapToJxType := func(typeID string) string {
 		if v, ok := typeIDToJx[typeID]; ok {
 			return v
-		} else if strings.HasPrefix(typeID, "array[") {
-			return "jx.Array"
-		} else if strings.HasPrefix(typeID, "map[") {
-			return "jx.Object"
 		}
 		return ""
 	}
@@ -520,8 +472,44 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 		}
 		for _, f := range s.JSON().Fields() {
 			sig := fieldSig{
-				name:   f.Tag.JSON,
-				typeID: ResolveTypeID(f.Type),
+				name: f.Tag.JSON,
+				typeID: func() string {
+					ft := f.Type
+					if ft == nil {
+						return tidAny
+					}
+					for ft.IsGeneric() && ft.GenericOf != nil {
+						ft = ft.GenericOf
+					}
+					switch ft.Kind {
+					case ir.KindPrimitive:
+						switch ft.Primitive {
+						case ir.Bool:
+							return tidBool
+						case ir.Int, ir.Int8, ir.Int16, ir.Int32, ir.Int64,
+							ir.Uint, ir.Uint8, ir.Uint16, ir.Uint32, ir.Uint64:
+							return tidInt
+						case ir.Float32, ir.Float64:
+							return tidNum
+						case ir.String, ir.ByteSlice:
+							return tidStr
+						case ir.Null:
+							return tidNull
+						default:
+							return tidAny
+						}
+					case ir.KindArray:
+						return tidArr
+					case ir.KindStruct:
+						return tidObj
+					case ir.KindMap:
+						return tidMap
+					case ir.KindEnum:
+						return tidEnum
+					default:
+						return string(ft.Kind)
+					}
+				}(),
 			}
 			uniq[s.Name][sig] = struct{}{}
 
@@ -662,8 +650,44 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 				}
 
 				sig := fieldSig{
-					name:   f.Tag.JSON,
-					typeID: ResolveTypeID(f.Type),
+					name: f.Tag.JSON,
+					typeID: func() string {
+						ft := f.Type
+						if ft == nil {
+							return tidAny
+						}
+						for ft.IsGeneric() && ft.GenericOf != nil {
+							ft = ft.GenericOf
+						}
+						switch ft.Kind {
+						case ir.KindPrimitive:
+							switch ft.Primitive {
+							case ir.Bool:
+								return tidBool
+							case ir.Int, ir.Int8, ir.Int16, ir.Int32, ir.Int64,
+								ir.Uint, ir.Uint8, ir.Uint16, ir.Uint32, ir.Uint64:
+								return tidInt
+							case ir.Float32, ir.Float64:
+								return tidNum
+							case ir.String, ir.ByteSlice:
+								return tidStr
+							case ir.Null:
+								return tidNull
+							default:
+								return tidAny
+							}
+						case ir.KindArray:
+							return tidArr
+						case ir.KindStruct:
+							return tidObj
+						case ir.KindMap:
+							return tidMap
+						case ir.KindEnum:
+							return tidEnum
+						default:
+							return string(ft.Kind)
+						}
+					}(),
 				}
 				if _, ok := uniq[s.Name][sig]; !ok {
 					continue
@@ -718,7 +742,43 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 					}
 					for _, f := range s.JSON().Fields() {
 						if f.Tag.JSON == fieldName {
-							typeID := ResolveTypeID(f.Type)
+							typeID := func() string {
+								ft := f.Type
+								if ft == nil {
+									return tidAny
+								}
+								for ft.IsGeneric() && ft.GenericOf != nil {
+									ft = ft.GenericOf
+								}
+								switch ft.Kind {
+								case ir.KindPrimitive:
+									switch ft.Primitive {
+									case ir.Bool:
+										return tidBool
+									case ir.Int, ir.Int8, ir.Int16, ir.Int32, ir.Int64,
+										ir.Uint, ir.Uint8, ir.Uint16, ir.Uint32, ir.Uint64:
+										return tidInt
+									case ir.Float32, ir.Float64:
+										return tidNum
+									case ir.String, ir.ByteSlice:
+										return tidStr
+									case ir.Null:
+										return tidNull
+									default:
+										return tidAny
+									}
+								case ir.KindArray:
+									return tidArr
+								case ir.KindStruct:
+									return tidObj
+								case ir.KindMap:
+									return tidMap
+								case ir.KindEnum:
+									return tidEnum
+								default:
+									return string(ft.Kind)
+								}
+							}()
 							typeIDs = append(typeIDs, fmt.Sprintf("%s: %s", s.Name, typeID))
 							break
 						}
@@ -726,12 +786,8 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 				}
 			}
 
-			return nil, fmt.Errorf(
-				"field %q cannot discriminate variants (requires unsupported discrimination): %v: %w",
-				fieldName,
-				typeIDs,
-				&ErrNotImplemented{Name: "type-based discrimination with same jxType"},
-			)
+			_ = typeIDs
+			return nil, &ErrNotImplemented{Name: "type-based discrimination with same jxType"}
 		}
 	}
 

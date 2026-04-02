@@ -577,3 +577,240 @@ func assertNotSum(t *testing.T, result *ir.Type) {
 	a := require.New(t)
 	a.NotEqual(ir.KindSum, result.Kind, "Expected non-sum type")
 }
+
+func TestNestedOneOfDiscriminatorInference(t *testing.T) {
+	t.Run("oneOf with nested oneOf struct variants with unique fields", func(t *testing.T) {
+		// Issue #1013: oneOf where one variant is itself a oneOf of structs.
+		// The nested sum type's sub-variants share a common field ("kind")
+		// but the parent-level variants have unique fields that allow discrimination.
+		a := require.New(t)
+		s := createTestSchemaGen(nil)
+
+		// StructA has fields: "kind", "alpha"
+		structA := createObjectSchema(
+			createProperty("kind", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("alpha", createPrimitiveSchema(jsonschema.String), true),
+		)
+		// StructB has fields: "kind", "beta"
+		structB := createObjectSchema(
+			createProperty("kind", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("beta", createPrimitiveSchema(jsonschema.String), true),
+		)
+		// StructC has fields: "gamma"
+		structC := createObjectSchema(
+			createProperty("gamma", createPrimitiveSchema(jsonschema.String), true),
+		)
+
+		// nestedOneOf = oneOf(StructA, StructB) — both share "kind"
+		nestedOneOf := &jsonschema.Schema{
+			Type:  jsonschema.Empty,
+			OneOf: []*jsonschema.Schema{structA, structB},
+		}
+
+		// parentOneOf = oneOf(nestedOneOf, StructC)
+		// nestedOneOf variants all have "kind", StructC has "gamma"
+		// So "kind" is unique to nestedOneOf, "gamma" is unique to StructC.
+		parentSchema := &jsonschema.Schema{
+			Type:  jsonschema.Empty,
+			OneOf: []*jsonschema.Schema{nestedOneOf, structC},
+		}
+
+		result, err := s.generate("ParentSum", parentSchema, false)
+		a.NoError(err)
+		a.NotNil(result)
+		a.Equal(ir.KindSum, result.Kind)
+		a.Len(result.SumOf, 2)
+
+		// Check that both variants have unique fields set.
+		for _, variant := range result.SumOf {
+			a.Greater(len(variant.SumSpec.Unique), 0,
+				"variant %s should have unique fields", variant.Name)
+		}
+	})
+
+	t.Run("oneOf with nested oneOf and all variants sharing same field names but different types", func(t *testing.T) {
+		// Issue #1185: All variants share the same field names but have different types.
+		// With a nested oneOf, the outer oneOf should still work if each variant
+		// has at least one unique required field.
+		a := require.New(t)
+		s := createTestSchemaGen(nil)
+
+		// StructD: "id", "data", "run_id" (unique)
+		structD := createObjectSchema(
+			createProperty("id", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("data", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("run_id", createPrimitiveSchema(jsonschema.String), true),
+		)
+		// StructE: "id", "data", "env_id" (unique)
+		structE := createObjectSchema(
+			createProperty("id", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("data", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("env_id", createPrimitiveSchema(jsonschema.String), true),
+		)
+		// StructF: "id", "data", "container_id" (unique)
+		structF := createObjectSchema(
+			createProperty("id", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("data", createPrimitiveSchema(jsonschema.String), true),
+			createProperty("container_id", createPrimitiveSchema(jsonschema.String), true),
+		)
+
+		// nestedOneOf = oneOf(StructD, StructE) — share "id", "data"
+		nestedOneOf := &jsonschema.Schema{
+			Type:  jsonschema.Empty,
+			OneOf: []*jsonschema.Schema{structD, structE},
+		}
+
+		// parentOneOf = oneOf(nestedOneOf, StructF)
+		// nestedOneOf intersection: "id", "data" — these are common with StructF too
+		// StructF unique: "container_id"
+		// nestedOneOf has no unique fields after removing common ("id","data")
+		// but "run_id" and "env_id" are only in sub-variants, not in StructF.
+		// The intersection of nestedOneOf is {"id","data"}, which overlaps with StructF.
+		// StructF has unique "container_id". nestedOneOf has no unique field in intersection.
+		// So nestedOneOf will be the default mapping.
+		parentSchema := &jsonschema.Schema{
+			Type:  jsonschema.Empty,
+			OneOf: []*jsonschema.Schema{nestedOneOf, structF},
+		}
+
+		result, err := s.generate("ParentSum2", parentSchema, false)
+		a.NoError(err)
+		a.NotNil(result)
+		a.Equal(ir.KindSum, result.Kind)
+	})
+
+	t.Run("non-struct non-sum variant still fails", func(t *testing.T) {
+		// Ensure that a variant that is not a struct or sum still fails
+		// with discriminator inference error.
+		a := require.New(t)
+		s := createTestSchemaGen(nil)
+
+		structG := createObjectSchema(
+			createProperty("name", createPrimitiveSchema(jsonschema.String), true),
+		)
+		arraySchema := &jsonschema.Schema{
+			Type: jsonschema.Array,
+			Item: createPrimitiveSchema(jsonschema.String),
+		}
+
+		// oneOf(struct, array) — can't use type discriminator since both produce different
+		// JSON types, but the 4th case (fields) doesn't apply to arrays.
+		// This should use type discriminator (3rd case) since struct=Object, array=Array.
+		parentSchema := &jsonschema.Schema{
+			Type:  jsonschema.Empty,
+			OneOf: []*jsonschema.Schema{structG, arraySchema},
+		}
+
+		result, err := s.generate("MixedSum", parentSchema, false)
+		// Should succeed via type discriminator
+		a.NoError(err)
+		a.NotNil(result)
+		a.Equal(ir.KindSum, result.Kind)
+		a.True(result.SumSpec.TypeDiscriminator)
+	})
+}
+
+func TestCollectStructFieldNames(t *testing.T) {
+	t.Run("struct type", func(t *testing.T) {
+		a := require.New(t)
+		typ := &ir.Type{
+			Kind: ir.KindStruct,
+			Fields: []*ir.Field{
+				{Name: "A", Tag: ir.Tag{JSON: "a"}},
+				{Name: "B", Tag: ir.Tag{JSON: "b"}},
+			},
+		}
+		fields := collectStructFieldNames(typ)
+		a.Len(fields, 2)
+		a.Contains(fields, "a")
+		a.Contains(fields, "b")
+	})
+
+	t.Run("sum type with intersection", func(t *testing.T) {
+		a := require.New(t)
+
+		sub1 := &ir.Type{
+			Kind: ir.KindStruct,
+			Fields: []*ir.Field{
+				{Name: "Common", Tag: ir.Tag{JSON: "common"}},
+				{Name: "X", Tag: ir.Tag{JSON: "x"}},
+			},
+		}
+		sub2 := &ir.Type{
+			Kind: ir.KindStruct,
+			Fields: []*ir.Field{
+				{Name: "Common", Tag: ir.Tag{JSON: "common"}},
+				{Name: "Y", Tag: ir.Tag{JSON: "y"}},
+			},
+		}
+		sumType := &ir.Type{
+			Kind:  ir.KindSum,
+			SumOf: []*ir.Type{sub1, sub2},
+		}
+		fields := collectStructFieldNames(sumType)
+		a.Len(fields, 1)
+		a.Contains(fields, "common")
+	})
+
+	t.Run("primitive type returns nil", func(t *testing.T) {
+		a := require.New(t)
+		typ := &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}
+		fields := collectStructFieldNames(typ)
+		a.Nil(fields)
+	})
+}
+
+func TestCanInferFieldDiscriminator(t *testing.T) {
+	t.Run("struct", func(t *testing.T) {
+		a := require.New(t)
+		a.True(canInferFieldDiscriminator(&ir.Type{Kind: ir.KindStruct}))
+	})
+
+	t.Run("sum of structs", func(t *testing.T) {
+		a := require.New(t)
+		sumType := &ir.Type{
+			Kind: ir.KindSum,
+			SumOf: []*ir.Type{
+				{Kind: ir.KindStruct},
+				{Kind: ir.KindStruct},
+			},
+		}
+		a.True(canInferFieldDiscriminator(sumType))
+	})
+
+	t.Run("sum with primitive", func(t *testing.T) {
+		a := require.New(t)
+		sumType := &ir.Type{
+			Kind: ir.KindSum,
+			SumOf: []*ir.Type{
+				{Kind: ir.KindStruct},
+				{Kind: ir.KindPrimitive, Primitive: ir.String},
+			},
+		}
+		a.False(canInferFieldDiscriminator(sumType))
+	})
+
+	t.Run("primitive", func(t *testing.T) {
+		a := require.New(t)
+		a.False(canInferFieldDiscriminator(&ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}))
+	})
+
+	t.Run("nested sum of structs", func(t *testing.T) {
+		a := require.New(t)
+		innerSum := &ir.Type{
+			Kind: ir.KindSum,
+			SumOf: []*ir.Type{
+				{Kind: ir.KindStruct},
+				{Kind: ir.KindStruct},
+			},
+		}
+		outerSum := &ir.Type{
+			Kind: ir.KindSum,
+			SumOf: []*ir.Type{
+				innerSum,
+				{Kind: ir.KindStruct},
+			},
+		}
+		a.True(canInferFieldDiscriminator(outerSum))
+	})
+}

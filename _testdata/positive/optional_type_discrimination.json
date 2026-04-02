@@ -1,0 +1,60 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Optional Type Discrimination",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/config": {
+      "get": {
+        "operationId": "getConfig",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Config": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/BasicConfig" },
+          { "$ref": "#/components/schemas/AdvancedConfig" }
+        ]
+      },
+      "BasicConfig": {
+        "type": "object",
+        "required": [ "mode", "level" ],
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          }
+        }
+      },
+      "AdvancedConfig": {
+        "type": "object",
+        "required": [ "mode", "threshold" ],
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "threshold": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Nullable Type Discrimination",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/entries": {
+      "get": {
+        "operationId": "getEntries",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Entry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Entry": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/TextEntry" },
+          { "$ref": "#/components/schemas/NumEntry" }
+        ]
+      },
+      "TextEntry": {
+        "type": "object",
+        "required": [ "key", "content" ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "NumEntry": {
+        "type": "object",
+        "required": [ "key", "amount" ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

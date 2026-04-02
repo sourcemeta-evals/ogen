@@ -1,0 +1,66 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Array Object Type Discrimination",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/resources": {
+      "get": {
+        "operationId": "getResources",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Resource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Resource": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/CollectionResource" },
+          { "$ref": "#/components/schemas/SingleResource" }
+        ]
+      },
+      "CollectionResource": {
+        "type": "object",
+        "required": [ "name", "tags" ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SingleResource": {
+        "type": "object",
+        "required": [ "name", "detail" ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

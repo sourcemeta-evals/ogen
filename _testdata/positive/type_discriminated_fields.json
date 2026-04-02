@@ -1,0 +1,69 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Type Discriminated Fields",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "getItems",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Item"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Item": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/StringItem" },
+          { "$ref": "#/components/schemas/NumberItem" }
+        ]
+      },
+      "StringItem": {
+        "type": "object",
+        "required": [ "id", "value", "label" ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "NumberItem": {
+        "type": "object",
+        "required": [ "id", "value", "count" ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "number"
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Field Name Discrimination",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/shapes": {
+      "get": {
+        "operationId": "getShapes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Shape"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Shape": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/Circle" },
+          { "$ref": "#/components/schemas/Rectangle" }
+        ]
+      },
+      "Circle": {
+        "type": "object",
+        "required": [ "radius" ],
+        "properties": {
+          "radius": {
+            "type": "number"
+          }
+        }
+      },
+      "Rectangle": {
+        "type": "object",
+        "required": [ "width", "height" ],
+        "properties": {
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

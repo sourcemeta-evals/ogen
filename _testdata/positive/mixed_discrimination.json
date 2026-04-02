@@ -1,0 +1,79 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mixed Discrimination",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/events": {
+      "post": {
+        "operationId": "postEvent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Event": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/UserEvent" },
+          { "$ref": "#/components/schemas/SystemEvent" },
+          { "$ref": "#/components/schemas/MetricEvent" }
+        ]
+      },
+      "UserEvent": {
+        "type": "object",
+        "required": [ "timestamp", "userId" ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "SystemEvent": {
+        "type": "object",
+        "required": [ "timestamp", "hostname" ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hostname": {
+            "type": "string"
+          }
+        }
+      },
+      "MetricEvent": {
+        "type": "object",
+        "required": [ "timestamp", "metricName" ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metricName": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

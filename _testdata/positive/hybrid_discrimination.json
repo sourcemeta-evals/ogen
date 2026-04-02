@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hybrid Discrimination",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/notifications": {
+      "post": {
+        "operationId": "postNotification",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notification"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Notification": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/EmailNotification" },
+          { "$ref": "#/components/schemas/SMSNotification" },
+          { "$ref": "#/components/schemas/PushNotification" }
+        ]
+      },
+      "EmailNotification": {
+        "type": "object",
+        "required": [ "recipient", "subject", "body" ],
+        "properties": {
+          "recipient": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
+      "SMSNotification": {
+        "type": "object",
+        "required": [ "recipient", "phone", "message" ],
+        "properties": {
+          "recipient": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PushNotification": {
+        "type": "object",
+        "required": [ "recipient", "deviceToken", "payload" ],
+        "properties": {
+          "recipient": {
+            "type": "string"
+          },
+          "deviceToken": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

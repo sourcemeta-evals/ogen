@@ -1,0 +1,84 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "oneOf nested sum type test",
+    "version": "v0.1.0"
+  },
+  "paths": {
+    "/test-nested-oneof": {
+      "get": {
+        "operationId": "testNestedOneOf",
+        "description": "Test oneOf with a nested oneOf sum type variant",
+        "responses": {
+          "200": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateThing"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateThingOptionA": {
+        "type": "object",
+        "required": ["kind", "alpha_value"],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "alpha_value": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateThingOptionB": {
+        "type": "object",
+        "required": ["kind", "beta_value"],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "beta_value": {
+            "type": "integer"
+          }
+        }
+      },
+      "CreateThingOptionC": {
+        "type": "object",
+        "required": ["gamma_value"],
+        "properties": {
+          "gamma_value": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InnerOneOf": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateThingOptionA"
+          },
+          {
+            "$ref": "#/components/schemas/CreateThingOptionB"
+          }
+        ]
+      },
+      "CreateThing": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/InnerOneOf"
+          },
+          {
+            "$ref": "#/components/schemas/CreateThingOptionC"
+          }
+        ]
+      }
+    }
+  }
+}

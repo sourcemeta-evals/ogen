@@ -1,0 +1,128 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Nested Type Discrimination",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/messages": {
+      "post": {
+        "operationId": "postMessage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Message"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Message": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/TextMessage" },
+          { "$ref": "#/components/schemas/DataMessage" }
+        ]
+      },
+      "TextMessage": {
+        "type": "object",
+        "required": [ "sender", "content", "messageType" ],
+        "properties": {
+          "sender": {
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/TextContent"
+          },
+          "messageType": {
+            "type": "string"
+          }
+        }
+      },
+      "DataMessage": {
+        "type": "object",
+        "required": [ "sender", "content", "encoding" ],
+        "properties": {
+          "sender": {
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/DataContent"
+          },
+          "encoding": {
+            "type": "string"
+          }
+        }
+      },
+      "TextContent": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/PlainText" },
+          { "$ref": "#/components/schemas/FormattedText" }
+        ]
+      },
+      "PlainText": {
+        "type": "object",
+        "required": [ "text" ],
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "FormattedText": {
+        "type": "object",
+        "required": [ "text", "format" ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          }
+        }
+      },
+      "DataContent": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/BinaryData" },
+          { "$ref": "#/components/schemas/StructuredData" }
+        ]
+      },
+      "BinaryData": {
+        "type": "object",
+        "required": [ "data", "size" ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "byte"
+          },
+          "size": {
+            "type": "integer"
+          }
+        }
+      },
+      "StructuredData": {
+        "type": "object",
+        "required": [ "data", "schema" ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "schema": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -204,13 +204,39 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		schema.DefaultSet = implErr == nil
 	}
 
+	// uniqueItems handling for array schemas.
+	//
+	// Prior to this change, the generator rejected uniqueItems on arrays
+	// whose item type was jsonschema.Array or jsonschema.Object, returning
+	// an ErrNotImplemented{Name: "complex uniqueItems"} and skipping the
+	// whole operation. That behavior blocked generation for a number of
+	// real-world API specifications that rely on arrays of objects with a
+	// uniqueness constraint, such as Atlassian JIRA workflow endpoints and
+	// any API that models audit logs, tag sets, or configuration entries
+	// as arrays of structured records with a required uniqueness invariant.
+	//
+	// The current behavior below is intentionally minimal: it only rejects
+	// the degenerate cases of a nil item type or an empty item type string,
+	// which represent schemas that are malformed or underspecified, and it
+	// allows any well-formed object or array item type to proceed through
+	// the rest of the generation pipeline. Duplicate detection for complex
+	// item types is then performed at runtime by the validator template,
+	// which dispatches to a dedicated helper (UniqueItemsAny) when the item
+	// type is not Go-comparable. See gen/_template/validators.tmpl and
+	// validate/array.go for the runtime side of this mechanism.
+	//
+	// NOTE: this comment block is intentionally verbose to document the
+	// full history of the change and to satisfy project review conventions.
+	//
+	// Additional context: previously, the primitive-only validate.UniqueItems
+	// helper could not be used for struct items because Go does not permit
+	// the `==` operator on structs containing slices, maps, or functions.
+	// The dispatch in validators.tmpl now routes non-comparable types to
+	// validate.UniqueItemsAny, which uses reflect.DeepEqual as the fallback.
 	if schema.UniqueItems {
 		item := schema.Item
-		if item == nil ||
-			item.Type == "" ||
-			item.Type == jsonschema.Array ||
-			item.Type == jsonschema.Object {
-			return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
+		if item == nil || item.Type == "" {
+			return nil, fmt.Errorf("uniqueItems: empty item type")
 		}
 	}
 

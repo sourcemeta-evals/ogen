@@ -1,4 +1,5 @@
 // Binary ogen generates go source code from OAS.
+// See docs for complex uniqueItems support.
 package main
 
 import (

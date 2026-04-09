@@ -106,6 +106,11 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			bArray := fmt.Sprintf("b.%s.Value", field.FieldName)
 			g.writeArrayComparisonWithNullable(b, aArray, bArray, "\t\t",
 				field.IsArrayOfStructs, field.IsArrayOfNullable, hasDepth)
+		case field.IsByteSlice:
+			// Optional wrapper around byte slice - use bytes.Equal()
+			fmt.Fprintf(b, "\t\tif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
 		default:
 			// Optional wrapper around primitive - use !=
 			fmt.Fprintf(b, "\t\tif a.%s.Value != b.%s.Value {\n", field.FieldName, field.FieldName)
@@ -140,6 +145,11 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			bArray := fmt.Sprintf("b.%s.Value", field.FieldName)
 			g.writeArrayComparisonWithNullable(b, aArray, bArray, "\t\t",
 				field.IsArrayOfStructs, field.IsArrayOfNullable, hasDepth)
+		case field.IsByteSlice:
+			// Nullable wrapper around byte slice - use bytes.Equal()
+			fmt.Fprintf(b, "\t\tif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
 		default:
 			// Nullable wrapper around primitive - use !=
 			fmt.Fprintf(b, "\t\tif a.%s.Value != b.%s.Value {\n", field.FieldName, field.FieldName)

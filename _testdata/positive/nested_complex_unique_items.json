@@ -1,0 +1,46 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "Test Nested Complex UniqueItems", "version": "0.1.0"},
+  "paths": {
+    "/workflows": {
+      "get": {
+        "operationId": "getWorkflows",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/Workflow"},
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Workflow": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "status": {"$ref": "#/components/schemas/WorkflowStatus"}
+        }
+      },
+      "WorkflowStatus": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": {"type": "integer"},
+          "label": {"type": "string"}
+        }
+      }
+    }
+  }
+}

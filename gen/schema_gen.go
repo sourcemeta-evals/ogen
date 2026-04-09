@@ -204,14 +204,9 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		schema.DefaultSet = implErr == nil
 	}
 
-	if schema.UniqueItems {
-		item := schema.Item
-		if item == nil ||
-			item.Type == "" ||
-			item.Type == jsonschema.Array ||
-			item.Type == jsonschema.Object {
-			return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
-		}
+	// TODO: handle complex uniqueItems properly one day
+	if schema.UniqueItems && schema.Item == nil {
+		return nil, fmt.Errorf("uniqueItems needs an item")
 	}
 
 	if n := schema.XOgenName; n != "" {

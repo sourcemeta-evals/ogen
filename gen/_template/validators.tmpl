@@ -59,9 +59,15 @@
 			return errors.Wrap(err, "array")
 		}
 		{{- if $v.UniqueItems }}
+		{{- if $t.Item.IsGoComparable }}
 		if err := validate.UniqueItems({{ $.Var }}); err != nil {
 			return errors.Wrap(err, "array")
 		}
+		{{- else }}
+		if err := validate.UniqueItemsFmt({{ $.Var }}); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		{{- end }}
 		{{- end }}
 	{{- end }}
 

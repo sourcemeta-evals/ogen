@@ -2,6 +2,7 @@ package validate
 
 import (
 	"github.com/go-faster/errors"
+	"fmt"
 )
 
 // Array validates array length.
@@ -58,6 +59,22 @@ func UniqueItems[S ~[]T, T comparable](arr S) error {
 				return errors.Errorf("duplicate element [%d] %v", i, a)
 			}
 		}
+	}
+	return nil
+}
+
+// UniqueItemsFmt checks for duplicates by converting each item to a string
+// via fmt.Sprintf and using a map to detect collisions. This is the easy way
+// of doing it and it works for any type. It will seperate items by the
+// string representation of their fields.
+func UniqueItemsFmt[S ~[]T, T any](arr S) error {
+	seen := map[string]bool{}
+	for i := range arr {
+		key := fmt.Sprintf("%v", arr[i])
+		if seen[key] {
+			return errors.Errorf("duplicate element [%d]", i)
+		}
+		seen[key] = true
 	}
 	return nil
 }

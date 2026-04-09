@@ -43,3 +43,15 @@ func (t *Type) CloneFeatures() []string {
 	}
 	return slices.Clone(t.Features)
 }
+
+// IsGoComparable returns whether the type is Go-comparable.
+// This is used to seperate primitive types from complex types in the template.
+func (t *Type) IsGoComparable() bool {
+	if t == nil {
+		return false
+	}
+	if t.Kind == KindPrimitive {
+		return true
+	}
+	return false
+}

@@ -133,6 +133,18 @@ func TestGenerate(t *testing.T) {
 			"content_header_response.json": {
 				"parameter content encoding",
 			},
+			"type_discriminated_fields.json": {
+				"discriminator inference",
+			},
+			"mixed_discrimination.json": {
+				"discriminator inference",
+			},
+			"array_object_type_discrimination.json": {
+				"discriminator inference",
+			},
+			"nullable_type_discrimination.json": {
+				"discriminator inference",
+			},
 		}))
 
 	t.Run("Examples", runPositive("_testdata/examples",

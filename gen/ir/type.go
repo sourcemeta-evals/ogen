@@ -47,6 +47,17 @@ type SumSpec struct {
 
 	// TypeDiscriminator denotes to distinguish variants by type.
 	TypeDiscriminator bool
+	// UniqueFieldVariants maps JSON field names to their type-discriminated variants.
+	// Key: field JSON name, Value: list of variants distinguishable by JSON type.
+	UniqueFieldVariants map[string][]UniqueFieldVariant
+}
+
+// UniqueFieldVariant represents a variant reachable via a specific JSON type on a shared field.
+type UniqueFieldVariant struct {
+	// VariantName is the Go type name of the variant.
+	VariantName string
+	// JxType is the jx.Type constant for runtime discrimination.
+	JxType string
 }
 
 type ResolvedSumSpecMap struct {

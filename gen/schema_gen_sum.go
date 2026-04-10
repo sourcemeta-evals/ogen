@@ -315,6 +315,115 @@ func (g *schemaGen) anyOf(name string, schema *jsonschema.Schema, side bool) (*i
 	return nil, &ErrNotImplemented{"complex anyOf"}
 }
 
+
+// fieldSignature represents a unique (name, typeID) pair for field-type-based discrimination
+type fieldSignature struct {
+	name   string
+	typeID string
+}
+
+// getFieldTypeID recursively determines a type identifier for any IR type,
+// unwrapping generics, optionals, and pointers to reach the base type
+func getFieldTypeID(t *ir.Type) string {
+	switch t.Kind {
+	case ir.KindGeneric:
+		if t.GenericOf != nil {
+			return getFieldTypeID(t.GenericOf)
+		}
+		return t.Name
+	case ir.KindPointer:
+		if t.PointerTo != nil {
+			return getFieldTypeID(t.PointerTo)
+		}
+		return t.Name
+	case ir.KindAlias:
+		if t.AliasTo != nil {
+			return getFieldTypeID(t.AliasTo)
+		}
+		return t.Name
+	case ir.KindPrimitive:
+		return string(t.Primitive)
+	case ir.KindEnum:
+		return "enum_" + t.Name
+	case ir.KindArray:
+		if t.Item != nil {
+			return "array[" + getFieldTypeID(t.Item) + "]"
+		}
+		return "array"
+	case ir.KindMap:
+		if t.Item != nil {
+			return "map[" + getFieldTypeID(t.Item) + "]"
+		}
+		return "map"
+	case ir.KindStruct:
+		return "object"
+	case ir.KindSum:
+		return "sum_" + t.Name
+	default:
+		return t.Name
+	}
+}
+
+// jxTypeForFieldType maps type identifiers to runtime jx.Type constants
+func jxTypeForFieldType(typeID string) jx.Type {
+	switch {
+	case typeID == "string" || strings.HasPrefix(typeID, "enum_"):
+		return jx.String
+	case typeID == "int" || typeID == "int32" || typeID == "int64" ||
+		typeID == "float" || typeID == "float32" || typeID == "float64" ||
+		typeID == "number":
+		return jx.Number
+	case typeID == "bool":
+		return jx.Bool
+	case typeID == "null":
+		return jx.Null
+	case strings.HasPrefix(typeID, "array"):
+		return jx.Array
+	default:
+		return jx.Object
+	}
+}
+
+// canUseFieldTypeDiscriminator checks if variants with shared field names
+// can be discriminated by their field types at runtime
+func canUseFieldTypeDiscriminator(variants []*ir.Type, noUniqueFields map[string]struct{}) bool {
+	// Collect field signatures per variant
+	signatures := map[string]map[fieldSignature]struct{}{}
+	for _, variant := range variants {
+		if _, ok := noUniqueFields[variant.Name]; !ok {
+			continue
+		}
+		sigs := map[fieldSignature]struct{}{}
+		for _, f := range variant.JSON().Fields() {
+			sig := fieldSignature{
+				name:   f.Tag.JSON,
+				typeID: getFieldTypeID(f.Type),
+			}
+			sigs[sig] = struct{}{}
+		}
+		signatures[variant.Name] = sigs
+	}
+
+	// Check if any field has different types across variants
+	fieldTypes := map[string]map[string]struct{}{}
+	for variantName, sigs := range signatures {
+		_ = variantName
+		for sig := range sigs {
+			if _, ok := fieldTypes[sig.name]; !ok {
+				fieldTypes[sig.name] = map[string]struct{}{}
+			}
+			fieldTypes[sig.name][sig.typeID] = struct{}{}
+		}
+	}
+
+	for _, types := range fieldTypes {
+		if len(types) > 1 {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*ir.Type, error) {
 	if err := ensureNoInfiniteRecursion(schema); err != nil {
 		return nil, err

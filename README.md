@@ -58,6 +58,7 @@ docker run --rm \
   - Primitive types (`string`, `number`) are detected by type
   - Discriminator field is used if defined in schema
   - Type is inferred by unique fields if possible
+  - Field type discrimination: when variants share field names but differ in types (e.g., `{id: string}` vs `{id: integer}`), the decoder peeks at the JSON type at runtime to dispatch to the correct variant
 - Extra Go struct field tags in the generated types
 - OpenTelemetry tracing and metrics
 

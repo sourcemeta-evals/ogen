@@ -425,13 +425,55 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 		return sum, nil
 	}
 
-	// 4th case: distinguish by unique fields.
+	// 4th case: distinguish by unique fields (with type-aware signatures).
 
-	// Determine unique fields for each SumOf variant.
+	type fieldSignature struct {
+		name   string
+		typeID string
+	}
+
+	// getFieldTypeID determines the base type identifier for discrimination.
+	// Uses the field's Kind directly to determine the JSON type mapping.
+	getFieldTypeID := func(t *ir.Type) string {
+		switch t.Kind {
+		case ir.KindPrimitive:
+			return string(t.Primitive)
+		case ir.KindArray:
+			return "array"
+		case ir.KindStruct, ir.KindMap:
+			return "object"
+		case ir.KindEnum:
+			return "string"
+		default:
+			return t.Name
+		}
+	}
+
+	// jxTypeForFieldType maps type identifiers to jx.Type constants
+	jxTypeForFieldType := func(typeID string) string {
+		switch typeID {
+		case "string":
+			return "String"
+		case "int", "int8", "int16", "int32", "int64",
+			"uint", "uint8", "uint16", "uint32", "uint64",
+			"float32", "float64":
+			return "Number"
+		case "bool":
+			return "Bool"
+		case "array":
+			return "Array"
+		default:
+			return "Object"
+		}
+	}
+
+	// Determine unique fields for each SumOf variant using (name, typeID) signatures.
 	uniq := map[string]map[string]struct{}{}
+	fieldSigs := map[string]map[fieldSignature]struct{}{}
 
 	for _, s := range sum.SumOf {
 		uniq[s.Name] = map[string]struct{}{}
+		fieldSigs[s.Name] = map[fieldSignature]struct{}{}
 		if !s.Is(ir.KindStruct) {
 			return nil, errors.Wrapf(&ErrNotImplemented{Name: "discriminator inference"},
 				"oneOf %s: variant %s: no unique fields, "+
@@ -440,34 +482,103 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 		}
 		for _, f := range s.JSON().Fields() {
 			uniq[s.Name][f.Tag.JSON] = struct{}{}
+			sig := fieldSignature{
+				name:   f.Tag.JSON,
+				typeID: getFieldTypeID(f.Type),
+			}
+			fieldSigs[s.Name][sig] = struct{}{}
 		}
 	}
 	{
-		// Collect fields that common for at least 2 variants.
-		commonFields := map[string]struct{}{}
+		// Collect fields that are common for at least 2 variants,
+		// considering (name, typeID) signatures instead of just names.
+		commonSigs := map[fieldSignature]struct{}{}
 		for _, variant := range sum.SumOf {
-			k := variant.Name
-			fields := uniq[k]
+			sigs := fieldSigs[variant.Name]
 			for _, otherVariant := range sum.SumOf {
-				otherK := otherVariant.Name
-				if otherK == k {
+				if otherVariant.Name == variant.Name {
 					continue
 				}
-				otherFields := uniq[otherK]
-				for otherField := range otherFields {
-					if _, has := fields[otherField]; has {
-						// variant and otherVariant have common field otherField.
-						commonFields[otherField] = struct{}{}
+				otherSigs := fieldSigs[otherVariant.Name]
+				for sig := range otherSigs {
+					if _, has := sigs[sig]; has {
+						commonSigs[sig] = struct{}{}
 					}
 				}
 			}
 		}
 
-		// Delete such fields.
-		for field := range commonFields {
+		// Only delete fields where BOTH name AND type match (true common fields).
+		// Fields with same name but different types remain as unique.
+		commonNames := map[string]struct{}{}
+		for sig := range commonSigs {
+			commonNames[sig.name] = struct{}{}
+		}
+		for field := range commonNames {
 			for _, variant := range sum.SumOf {
 				delete(uniq[variant.Name], field)
 			}
+		}
+
+		// Re-add fields that have the same name but different types across variants.
+		// These can be discriminated by checking the JSON type at runtime.
+		fieldTypesByName := map[string]map[string]*ir.Type{}
+		for _, variant := range sum.SumOf {
+			for _, f := range variant.JSON().Fields() {
+				typeID := getFieldTypeID(f.Type)
+				key := f.Tag.JSON + ":" + typeID
+				if _, ok := fieldTypesByName[key]; !ok {
+					fieldTypesByName[key] = map[string]*ir.Type{}
+				}
+				fieldTypesByName[key][variant.Name] = variant
+			}
+		}
+
+		// Find fields where same name maps to different types
+		typeDiscriminatedFields := map[string]map[string][]ir.UniqueFieldVariant{}
+		for _, variant := range sum.SumOf {
+			for _, f := range variant.JSON().Fields() {
+				typeID := getFieldTypeID(f.Type)
+				jxType := jxTypeForFieldType(typeID)
+				if _, ok := typeDiscriminatedFields[f.Tag.JSON]; !ok {
+					typeDiscriminatedFields[f.Tag.JSON] = map[string][]ir.UniqueFieldVariant{}
+				}
+				typeDiscriminatedFields[f.Tag.JSON][variant.Name] = append(
+					typeDiscriminatedFields[f.Tag.JSON][variant.Name],
+					ir.UniqueFieldVariant{
+						VariantName: variant.Name,
+						JxType:      jxType,
+					},
+				)
+			}
+		}
+
+		// Populate UniqueFieldVariants for fields that differ by type
+		uniqueFieldVariants := map[string][]ir.UniqueFieldVariant{}
+		for fieldName, variantMap := range typeDiscriminatedFields {
+			if len(variantMap) <= 1 {
+				continue
+			}
+			// Check that at least two variants have different jx types
+			jxTypes := map[string]struct{}{}
+			var allVariants []ir.UniqueFieldVariant
+			for _, variants := range variantMap {
+				for _, v := range variants {
+					jxTypes[v.JxType] = struct{}{}
+					allVariants = append(allVariants, v)
+				}
+			}
+			if len(jxTypes) > 1 {
+				uniqueFieldVariants[fieldName] = allVariants
+				// Re-add as unique since type discrimination is possible
+				for _, variant := range sum.SumOf {
+					uniq[variant.Name][fieldName] = struct{}{}
+				}
+			}
+		}
+
+		if len(uniqueFieldVariants) > 0 {
+			sum.SumSpec.UniqueFieldVariants = uniqueFieldVariants
 		}
 
 		// Check that at most one type has no unique fields.
@@ -475,7 +586,6 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 		for _, variant := range sum.SumOf {
 			k := variant.Name
 			if len(uniq[k]) == 0 {
-				// Set mapping without unique fields as default
 				if len(noUniqueFields) < 1 {
 					sum.SumSpec.DefaultMapping = k
 				}
@@ -484,9 +594,6 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 		}
 
 		if len(noUniqueFields) > 1 {
-			// Unable to deterministically select sub-schema only on fields.
-
-			// Collect field -> variant mapping to compute fields used by multiple variants.
 			fieldToVariants := map[string]map[*ir.Type]struct{}{}
 			for _, variant := range sum.SumOf {
 				for _, f := range variant.JSON().Fields() {
@@ -499,13 +606,11 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 				}
 			}
 
-			// Collect the problematic variants and fields.
 			badVariants := make([]BadVariant, 0, len(noUniqueFields))
 			for _, variant := range sum.SumOf {
 				if _, ok := noUniqueFields[variant.Name]; !ok {
 					continue
 				}
-
 				fields := map[string][]*ir.Type{}
 				for _, f := range variant.JSON().Fields() {
 					for typ := range fieldToVariants[f.Tag.JSON] {
@@ -520,7 +625,6 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 					Fields: fields,
 				})
 			}
-
 			return nil, &ErrFieldsDiscriminatorInference{
 				Sum:   sum,
 				Types: badVariants,

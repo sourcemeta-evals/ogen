@@ -126,6 +126,45 @@ func (s *{{ $.Name }}) Decode(d *jx.Decoder) error {
 				}
 				return nil
 			{{- else }}
+			{{- if $.SumSpec.UniqueFieldVariants }}
+			{{- range $fieldName, $variants := $.SumSpec.UniqueFieldVariants }}
+			case {{ quote $fieldName }}:
+				{{- if eq (len $variants) 1 }}
+				{{- range $v := $variants }}
+				match := {{ $v.VariantName }}{{ $.Name }}
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+				{{- end }}
+				{{- else }}
+				typ := d.Next()
+				switch typ {
+				{{- range $v := uniqueJxTypes $variants }}
+				case jx.{{ $v.JxType }}:
+					s.Type = {{ $v.VariantName }}{{ $.Name }}
+					found = true
+				{{- end }}
+				}
+				{{- end }}
+			{{- end }}
+			{{- range $s := $.SumOf }}
+			{{- range $f := $s.SumSpec.Unique }}
+			{{- if not (index $.SumSpec.UniqueFieldVariants $f.Tag.JSON) }}
+			case {{ quote $f.Tag.JSON }}:
+				match := {{ $s.Name }}{{ $.Name }}
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			{{- end }}
+			{{- end }}
+			{{- end }}
+			{{- else }}
 			{{- range $s := $.SumOf }}
 			{{- range $f := $s.SumSpec.Unique }}
 			case {{ quote $f.Tag.JSON }}:

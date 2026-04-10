@@ -209,6 +209,17 @@ func templateFunctions() template.FuncMap {
 		"isObjectParam":       isObjectParam,
 		"paramObjectFields":   paramObjectFields,
 		"uniqueResponseTypes": uniqueResponseTypes,
+		"uniqueJxTypes": func(variants []ir.UniqueFieldVariant) []ir.UniqueFieldVariant {
+			seen := make(map[string]bool)
+			var unique []ir.UniqueFieldVariant
+			for _, v := range variants {
+				if !seen[v.JxType] {
+					seen[v.JxType] = true
+					unique = append(unique, v)
+				}
+			}
+			return unique
+		},
 	}
 }
 

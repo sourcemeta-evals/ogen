@@ -92,6 +92,22 @@ func (s *{{ $.Name }}) Decode(d *jx.Decoder) error {
 	default:
 		return errors.Errorf("unexpected json type %q", t)
 	}
+	{{- else if $d.TryEach }}
+	// Try-each variant decoding: attempt each variant and pick the first success.
+	// This handles oneOf schemas where variants share field names but differ in types.
+	var tryEachErrors []string
+	{{- range $s := $.SumOf }}
+	if err := d.Capture(func(d *jx.Decoder) error {
+		{{- template "json/dec" elem $s (printf "s.%s" $s.Name) }}
+		return nil
+	}); err == nil {
+		s.Type = {{ $s.Name }}{{ $.Name }}
+		return nil
+	} else {
+		tryEachErrors = append(tryEachErrors, err.Error())
+	}
+	{{- end }}
+	return errors.Errorf("no matching oneOf variant: [%s]", strings.Join(tryEachErrors, "; "))
 	{{- else if or ($d.Fields) ($d.Discriminator) }}
 	if typ := d.Next(); typ != jx.Object {
 		return errors.Errorf("unexpected json type %q", typ)

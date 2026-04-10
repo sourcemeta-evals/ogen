@@ -374,6 +374,11 @@ func (j JSON) Sum() SumJSON {
 			Type: SumJSONTypeDiscriminator,
 		}
 	}
+	if j.t.SumSpec.TryEach {
+		return SumJSON{
+			Type: SumJSONTryEach,
+		}
+	}
 	for _, s := range j.t.SumOf {
 		if len(s.SumSpec.Unique) > 0 {
 			return SumJSON{
@@ -393,6 +398,7 @@ const (
 	SumJSONFields
 	SumJSONDiscriminator
 	SumJSONTypeDiscriminator
+	SumJSONTryEach
 )
 
 // SumJSON specifies rules for parsing sum types in json.
@@ -410,6 +416,8 @@ func (s SumJSON) String() string {
 		return "discriminator"
 	case SumJSONTypeDiscriminator:
 		return "type_discriminator"
+	case SumJSONTryEach:
+		return "try_each"
 	default:
 		return "unknown"
 	}
@@ -419,3 +427,4 @@ func (s SumJSON) Primitive() bool         { return s.Type == SumJSONPrimitive }
 func (s SumJSON) Discriminator() bool     { return s.Type == SumJSONDiscriminator }
 func (s SumJSON) TypeDiscriminator() bool { return s.Type == SumJSONTypeDiscriminator }
 func (s SumJSON) Fields() bool            { return s.Type == SumJSONFields }
+func (s SumJSON) TryEach() bool           { return s.Type == SumJSONTryEach }

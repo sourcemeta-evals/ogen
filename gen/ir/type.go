@@ -47,6 +47,9 @@ type SumSpec struct {
 
 	// TypeDiscriminator denotes to distinguish variants by type.
 	TypeDiscriminator bool
+	// TryEach enables sequential variant decoding when field-type discrimination
+	// identifies type-distinguishable fields but exact dispatch is complex.
+	TryEach bool
 }
 
 type ResolvedSumSpecMap struct {

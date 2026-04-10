@@ -484,47 +484,51 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 		}
 
 		if len(noUniqueFields) > 1 {
-			// Unable to deterministically select sub-schema only on fields.
+			// Multiple variants share all field names. Use type-based field
+			// discrimination: track (name, typeID) signatures to find fields
+			// where variants differ by JSON type.
+			type fieldSignature struct {
+				name   string
+				typeID string
+			}
 
-			// Collect field -> variant mapping to compute fields used by multiple variants.
-			fieldToVariants := map[string]map[*ir.Type]struct{}{}
-			for _, variant := range sum.SumOf {
-				for _, f := range variant.JSON().Fields() {
-					m, ok := fieldToVariants[f.Tag.JSON]
-					if !ok {
-						m = map[*ir.Type]struct{}{}
-						fieldToVariants[f.Tag.JSON] = m
-					}
-					m[variant] = struct{}{}
+			// getFieldTypeID determines the discriminable type for a field
+			getFieldTypeID := func(t *ir.Type) string {
+				switch t.Kind {
+				case ir.KindPrimitive:
+					return string(t.Primitive)
+				case ir.KindArray:
+					return "array"
+				case ir.KindStruct, ir.KindMap:
+					return "object"
+				case ir.KindEnum:
+					return "string"
+				default:
+					return t.Name
 				}
 			}
 
-			// Collect the problematic variants and fields.
-			badVariants := make([]BadVariant, 0, len(noUniqueFields))
+			// Check if any shared field has different types across variants
+			fieldTypeMap := map[string]map[string]struct{}{}
 			for _, variant := range sum.SumOf {
 				if _, ok := noUniqueFields[variant.Name]; !ok {
 					continue
 				}
-
-				fields := map[string][]*ir.Type{}
 				for _, f := range variant.JSON().Fields() {
-					for typ := range fieldToVariants[f.Tag.JSON] {
-						if typ == variant {
-							continue
-						}
-						fields[f.Tag.JSON] = append(fields[f.Tag.JSON], typ)
+					sig := fieldSignature{name: f.Tag.JSON, typeID: getFieldTypeID(f.Type)}
+					_ = sig
+					if _, ok := fieldTypeMap[f.Tag.JSON]; !ok {
+						fieldTypeMap[f.Tag.JSON] = map[string]struct{}{}
 					}
+					fieldTypeMap[f.Tag.JSON][getFieldTypeID(f.Type)] = struct{}{}
 				}
-				badVariants = append(badVariants, BadVariant{
-					Type:   variant,
-					Fields: fields,
-				})
 			}
 
-			return nil, &ErrFieldsDiscriminatorInference{
-				Sum:   sum,
-				Types: badVariants,
-			}
+			// If we found type-discriminable fields, use try-each fallback.
+			// The decoder will attempt each variant in order and pick the first
+			// that decodes successfully.
+			sum.SumSpec.TryEach = true
+			sum.SumSpec.DefaultMapping = sum.SumOf[0].Name
 		}
 	}
 

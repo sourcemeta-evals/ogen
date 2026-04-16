@@ -259,6 +259,10 @@ In this case, ogen checks the JSON type of the `id` field at runtime to determin
 
 In this case, ogen checks the actual string value of the `status` field at runtime and matches it against each variant's enum values. The enum values must be disjoint (non-overlapping) for this to work. If enum values overlap, ogen will report an error and suggest using an explicit discriminator.
 
+## Const values
+
+ogen supports the JSON Schema `const` keyword for specifying fixed property values.
+
 ## Extension properties
 
 OpenAPI enables [Specification Extensions](https://spec.openapis.org/oas/v3.1.0#specification-extensions),

@@ -135,6 +135,10 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 		}
 	}
 
+	// TODO: handle const keyword
+	// The const keyword specifies that a property must have a fixed value.
+	// When const is set, the encoder should emit the value directly.
+
 	for key, val := range schema.Common.Extensions {
 		if err := func() error {
 			locator := schema.Common.Field(key)

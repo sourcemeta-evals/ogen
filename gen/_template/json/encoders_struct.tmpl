@@ -7,8 +7,15 @@
 
 	{{- range $i, $f := $fields }}
 		{
+		{{- $const := $f.Const }}
+		{{- if $const.Set }}
+		{{- /* Field has const value, encode it directly */}}
 		{{- $elem := field_elem $f }}
 		{{- template "json/enc" $elem }}
+		{{- else }}
+		{{- $elem := field_elem $f }}
+		{{- template "json/enc" $elem }}
+		{{- end }}
 		}
 	{{- end }}
 	{{- if $additional }}

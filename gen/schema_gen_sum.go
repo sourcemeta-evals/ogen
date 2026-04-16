@@ -1468,6 +1468,23 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 		r.DefaultSet = true
 	}
 
+	// Const
+	switch {
+	case s1.ConstSet && !s2.ConstSet:
+		r.Const = s1.Const
+		r.ConstSet = true
+	case !s1.ConstSet && s2.ConstSet:
+		r.Const = s2.Const
+		r.ConstSet = true
+	case s1.ConstSet && s2.ConstSet:
+		if !reflect.DeepEqual(s1.Const, s2.Const) {
+			return nil, errors.New("schemes have different const values")
+		}
+
+		r.Const = s1.Const
+		r.ConstSet = true
+	}
+
 	// Discriminator
 	switch d1, d2 := s1.Discriminator, s2.Discriminator; {
 	case d1 != nil && d2 != nil:

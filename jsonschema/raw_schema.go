@@ -39,6 +39,8 @@ type RawSchema struct {
 	XML           *XML              `json:"xml,omitempty" yaml:"xml,omitempty"`
 	Example       Example           `json:"example,omitempty" yaml:"example,omitempty"`
 
+	Const Default `json:"const,omitempty" yaml:"const,omitempty"`
+
 	Common OpenAPICommon `json:"-" yaml:",inline"`
 }
 

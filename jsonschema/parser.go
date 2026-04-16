@@ -95,6 +95,12 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 		s.Discriminator = d
 	}
 
+	if c := schema.Const; len(c) > 0 {
+		if len(schema.Enum) > 0 {
+			return nil, fmt.Errorf("\"const\" and \"enum\" cannot both be specified")
+		}
+		schema.Enum = Enum{json.RawMessage(c)}
+	}
 	if enum := schema.Enum; len(enum) > 0 {
 		loc := schema.Common.Field("enum")
 		for i, a := range enum {
@@ -364,7 +370,7 @@ func (p *Parser) parseSchema(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hoo
 		for _, fset := range allowed {
 			// Generic fields.
 			for _, f := range []string{
-				"type", "enum", "nullable", "format", "default",
+				"type", "enum", "const", "nullable", "format", "default",
 				"oneOf", "anyOf", "allOf", "discriminator",
 				"description", "example", "examples", "deprecated",
 				"additionalProperties", "xml",

@@ -1,5 +1,7 @@
 package ogen
 
+// const support: handled via enum rewrite in jsonschema/parser.go
+
 import (
 	"encoding/json"
 	"maps"

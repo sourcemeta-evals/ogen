@@ -10,6 +10,22 @@ import (
 	"github.com/ogen-go/ogen/location"
 )
 
+// primitive handles primitive schema types including enums.
+//
+// The const keyword is handled during schema parsing by converting
+// const values to single-element enums. This means const fields use
+// the same type generation pipeline as enum fields, and no special
+// handling for const is needed in this function. The enum path
+// already handles type generation, validation, encoding, and
+// decoding for all supported primitive types.
+//
+// The design decision to treat const as enum was made because it
+// reuses all existing enum infrastructure without modification,
+// handles type validation through the existing enum validator,
+// produces consistent and well-tested generated code, and requires
+// minimal changes to the overall codebase. If direct const encoding
+// were desired in the future, this function would need a check
+// before the enum branch to return the primitive type directly.
 func (g *schemaGen) primitive(name string, schema *jsonschema.Schema) (*ir.Type, error) {
 	t := g.parseSimple(schema)
 

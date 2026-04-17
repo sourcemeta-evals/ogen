@@ -9,41 +9,22 @@
 		{
 		{{- $const := $f.Const }}
 		{{- if $const.Set }}
-		{{- /* Field has const value, encode it directly */}}
 		e.FieldStart({{ $f.Tag.EscapedJSON }})
 		{{- $t := $f.Type }}
-		{{- $constVal := print_go $const.Value }}
-		{{- /* For generic types, get JSON encoding from underlying type */}}
+		{{- $cv := "" }}
+		{{- if eq (printf "%T" $const.Value) "string" }}{{- $cv = printf "%q" $const.Value }}{{- else }}{{- $cv = printf "%v" $const.Value }}{{- end }}
 		{{- if $t.IsGeneric }}
 		{{- $g := $t.GenericOf }}
 		{{- if $g.IsNull }}
 		e.Null()
 		{{- else }}
-		{{- $j := $g.JSON }}
-		{{- if $j.TimeFormat }}
-		json.EncodeTimeFormat(e, {{ $constVal }}, {{ $j.TimeFormat }})
-		{{- else if $j.Encoder }}
-		json.Encode{{ $j.Encoder }}(e, {{ $constVal }})
-		{{- else if $j.Fn }}
-		e.{{ $j.Fn }}({{ $constVal }})
-		{{- else }}
-		{{ errorf "unsupported const encoding for generic type: %s (underlying: %s)" $t $g }}
-		{{- end }}
+		e.{{ $g.JSON.Fn }}({{ $cv }})
 		{{- end }}
 		{{- else }}
 		{{- if $t.IsNull }}
 		e.Null()
 		{{- else }}
-		{{- $j := $t.JSON }}
-		{{- if $j.TimeFormat }}
-		json.EncodeTimeFormat(e, {{ $constVal }}, {{ $j.TimeFormat }})
-		{{- else if $j.Encoder }}
-		json.Encode{{ $j.Encoder }}(e, {{ $constVal }})
-		{{- else if $j.Fn }}
-		e.{{ $j.Fn }}({{ $constVal }})
-		{{- else }}
-		{{ errorf "unsupported const encoding for type: %s" $t }}
-		{{- end }}
+		e.{{ $t.JSON.Fn }}({{ $cv }})
 		{{- end }}
 		{{- end }}
 		{{- else }}

@@ -110,6 +110,5 @@ components:
         code:
           type: integer
           format: int32
-          const: 400
         message:
           type: string

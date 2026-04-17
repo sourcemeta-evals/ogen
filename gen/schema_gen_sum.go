@@ -1367,7 +1367,7 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 	}
 
 	containsValidators := func(s *jsonschema.Schema) bool {
-		if s.Type != "" || s.Format != "" || s.Nullable || len(s.Enum) > 0 || s.DefaultSet || s.ConstSet {
+		if s.Type != "" || s.Format != "" || s.Nullable || len(s.Enum) > 0 || s.DefaultSet || s.ConstValSet {
 			return true
 		}
 		if s.Item != nil ||

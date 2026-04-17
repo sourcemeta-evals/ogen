@@ -63,8 +63,6 @@ type Schema struct {
 	AdditionalProperties *bool             // Whether Object has additional properties.
 	PatternProperties    []PatternProperty // Only for Object.
 	Enum                 []any             // Only for Enum.
-	Const                any               // Only for Const.
-	ConstSet             bool              // Whether Const is set.
 	Properties           []Property        // Only for Object.
 	Required             []string
 
@@ -110,6 +108,9 @@ type Schema struct {
 	ExtraTags map[string]string
 
 	XOgenTimeFormat string // Time format for time.Time.
+
+	ConstVal    any
+	ConstValSet bool
 
 	location.Pointer `json:"-" yaml:"-"`
 }

@@ -103,8 +103,8 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 		if err != nil {
 			return nil, fmt.Errorf("\"const\" value: %w", err)
 		}
-		s.Const = v
-		s.ConstSet = true
+		s.ConstVal = v
+		s.ConstValSet = true
 	}
 	if enum := schema.Enum; len(enum) > 0 {
 		loc := schema.Common.Field("enum")

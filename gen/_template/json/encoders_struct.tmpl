@@ -7,7 +7,7 @@
 
 	{{- range $i, $f := $fields }}
 		{
-		{{- $const := $f.Const }}
+		{{- $const := $f.ConstInfo }}
 		{{- if $const.Set }}
 		e.FieldStart({{ $f.Tag.EscapedJSON }})
 		{{- $t := $f.Type }}

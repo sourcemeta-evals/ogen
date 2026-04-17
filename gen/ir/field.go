@@ -7,6 +7,11 @@ import (
 	"github.com/ogen-go/ogen/jsonschema"
 )
 
+type Const struct {
+	Value any
+	Set   bool
+}
+
 // InlineField defines how to inline field.
 type InlineField int
 
@@ -55,17 +60,6 @@ func (f Field) Default() Default {
 		return typ.Default()
 	}
 	return Default{}
-}
-
-// Const returns const value of this field, if it is set.
-func (f Field) Const() Const {
-	if f.Spec != nil && f.Spec.Schema != nil {
-		return Const{
-			Value: f.Spec.Schema.Const,
-			Set:   f.Spec.Schema.ConstSet,
-		}
-	}
-	return Const{}
 }
 
 // GoDoc returns field godoc.
@@ -130,4 +124,14 @@ func (t Type) FileParameters() (params []Parameter) {
 	return t.parameters(func(t *Type) bool {
 		return t.HasFeature("multipart-file")
 	})
+}
+
+func (f Field) ConstInfo() Const {
+	if f.Spec != nil && f.Spec.Schema != nil {
+		return Const{
+			Value: f.Spec.Schema.ConstVal,
+			Set:   f.Spec.Schema.ConstValSet,
+		}
+	}
+	return Const{}
 }

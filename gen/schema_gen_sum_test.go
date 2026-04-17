@@ -9,6 +9,55 @@ import (
 	"github.com/ogen-go/ogen/jsonschema"
 )
 
+func TestMergeSchemesConst(t *testing.T) {
+	a := require.New(t)
+
+	// Merging a schema with only const (no type, format, or other validators)
+	// into a typed schema must preserve the const value.
+	s1 := &jsonschema.Schema{
+		Type: jsonschema.Integer,
+	}
+	s2 := &jsonschema.Schema{
+		Const:    int64(400),
+		ConstSet: true,
+	}
+
+	result, err := mergeSchemes(s1, s2)
+	a.NoError(err)
+	a.True(result.ConstSet, "const must survive allOf merge")
+	a.Equal(int64(400), result.Const)
+	a.Equal(jsonschema.Integer, result.Type)
+
+	// Merging two schemas with the same const must succeed.
+	s3 := &jsonschema.Schema{
+		Type:     jsonschema.Integer,
+		Const:    int64(400),
+		ConstSet: true,
+	}
+	s4 := &jsonschema.Schema{
+		Const:    int64(400),
+		ConstSet: true,
+	}
+
+	result2, err := mergeSchemes(s3, s4)
+	a.NoError(err)
+	a.True(result2.ConstSet)
+	a.Equal(int64(400), result2.Const)
+
+	// Merging two schemas with different const values must error.
+	s5 := &jsonschema.Schema{
+		Const:    int64(400),
+		ConstSet: true,
+	}
+	s6 := &jsonschema.Schema{
+		Const:    int64(500),
+		ConstSet: true,
+	}
+
+	_, err = mergeSchemes(s5, s6)
+	a.Error(err)
+}
+
 func Test_mergeEnums(t *testing.T) {
 	tests := []struct {
 		a, b    []any

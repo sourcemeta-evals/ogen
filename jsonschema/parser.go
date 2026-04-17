@@ -99,7 +99,12 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 		if len(schema.Enum) > 0 {
 			return nil, fmt.Errorf("\"const\" and \"enum\" cannot both be specified")
 		}
-		schema.Enum = Enum{json.RawMessage(c)}
+		v, err := parseJSONValue(nil, json.RawMessage(c))
+		if err != nil {
+			return nil, fmt.Errorf("\"const\" value: %w", err)
+		}
+		s.Const = v
+		s.ConstSet = true
 	}
 	if enum := schema.Enum; len(enum) > 0 {
 		loc := schema.Common.Field("enum")

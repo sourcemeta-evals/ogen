@@ -1,4 +1,5 @@
 // Binary ogen generates go source code from OAS.
+// Updated for OpenAPI 3.2 support.
 package main
 
 import (

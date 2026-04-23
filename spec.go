@@ -315,6 +315,10 @@ type PathItem struct {
 	Patch *Operation `json:"patch,omitempty" yaml:"patch,omitempty"`
 	// A definition of a TRACE operation on this path.
 	Trace *Operation `json:"trace,omitempty" yaml:"trace,omitempty"`
+	// Query holds the query parameters for this path.
+	Query *Operation `json:"query,omitempty" yaml:"query,omitempty"`
+	// AdditionalOperations lists extra HTTP methods supported by this path.
+	AdditionalOperations []string `json:"additionalOperations,omitempty" yaml:"additionalOperations,omitempty"`
 	// An alternative server array to service all operations in this path.
 	Servers []Server `json:"servers,omitempty" yaml:"servers,omitempty"`
 	// A list of parameters that are applicable for all the operations described under this path.

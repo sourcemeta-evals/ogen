@@ -210,6 +210,7 @@ func forEachOps(item *ogen.PathItem, f func(method string, op ogen.Operation) er
 	handle("head", item.Head)
 	handle("patch", item.Patch)
 	handle("trace", item.Trace)
+	handle("query", item.Query)
 	return err
 }
 

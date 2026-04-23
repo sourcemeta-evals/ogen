@@ -324,6 +324,10 @@ type PathItem struct {
 	// The list MUST NOT include duplicated parameters. A unique parameter is defined by
 	// a combination of a name and location.
 	Parameters []*Parameter `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+	// Query operation on this path.
+	Query *Operation `json:"query,omitempty" yaml:"query,omitempty"`
+	// Additional operations on this path keyed by HTTP method.
+	AdditionalOperations map[string]*Operation `json:"additionalOperations,omitempty" yaml:"additionalOperations,omitempty"`
 
 	Common OpenAPICommon `json:"-" yaml:",inline"`
 }

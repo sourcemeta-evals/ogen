@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"go/token"
+	"strings"
 
 	"github.com/go-faster/errors"
 
@@ -62,6 +63,24 @@ func (p *parser) parsePathItem(
 	err = p.parseOperationGroup(item.Common, &operationGroup)
 	if err != nil {
 		return nil, errors.Wrap(err, xOgenOperationGroup)
+	}
+
+	if len(item.AdditionalOperations) > 0 {
+		if err := p.requireMinorVersion("additional operations", 2); err != nil {
+			return nil, p.wrapField("additionalOperations", p.file(ctx), locator, err)
+		}
+		for method := range item.AdditionalOperations {
+			switch strings.ToLower(method) {
+			case "get", "put", "post", "delete", "options", "head", "patch", "trace", "query":
+				return nil, p.wrapField("additionalOperations", p.file(ctx), locator,
+					fmt.Errorf("entry for method %s is not allowed in additionalOperations", method))
+			}
+		}
+	}
+	if item.Query != nil {
+		if err := p.requireMinorVersion("query method", 2); err != nil {
+			return nil, p.wrapField("query", p.file(ctx), locator, err)
+		}
 	}
 
 	var ops []*openapi.Operation
@@ -209,7 +228,11 @@ func forEachOps(item *ogen.PathItem, f func(method string, op ogen.Operation) er
 	handle("options", item.Options)
 	handle("head", item.Head)
 	handle("patch", item.Patch)
+	handle("query", item.Query)
 	handle("trace", item.Trace)
+	for method, op := range item.AdditionalOperations {
+		handle(strings.ToLower(method), op)
+	}
 	return err
 }
 

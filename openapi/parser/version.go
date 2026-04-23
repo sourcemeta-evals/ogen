@@ -21,7 +21,13 @@ func (p *parser) parseVersion() (rerr error) {
 	if err := p.version.UnmarshalText([]byte(version)); err != nil {
 		return errors.Wrap(err, "invalid version")
 	}
-	if p.version.Major != 3 || p.version.Minor > 1 {
+	// Allow OpenAPI 3.2 specs.
+	// The query and additionalOperations fields require version 3.2.
+	// See https://spec.openapis.org/oas/v3.2.0#path-item-object.
+	// Version gating is enforced in parsePathItem.
+	// We only need to accept the version here.
+	// The actual validation happens downstream.
+	if p.version.Major != 3 || p.version.Minor > 2 {
 		return errors.Errorf("unsupported version: %s", version)
 	}
 	return nil

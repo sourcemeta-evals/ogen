@@ -443,6 +443,34 @@ func (p *PathItem) SetTrace(o *Operation) *PathItem {
 	return p
 }
 
+// SetQuery sets the Query of the PathItem.
+func (p *PathItem) SetQuery(o *Operation) *PathItem {
+	p.Query = o
+	return p
+}
+
+// SetAdditionalOperations sets the AdditionalOperations of the PathItem.
+func (p *PathItem) SetAdditionalOperations(ops map[string]*Operation) *PathItem {
+	p.initAdditionalOperations()
+	for method, op := range ops {
+		p.AdditionalOperations[strings.ToLower(method)] = op
+	}
+	return p
+}
+
+// SetAdditionalOperation sets a single operation in the AdditionalOperations of the PathItem.
+func (p *PathItem) SetAdditionalOperation(method string, o *Operation) *PathItem {
+	p.initAdditionalOperations()
+	p.AdditionalOperations[strings.ToLower(method)] = o
+	return p
+}
+
+func (p *PathItem) initAdditionalOperations() {
+	if p.AdditionalOperations == nil {
+		p.AdditionalOperations = make(map[string]*Operation)
+	}
+}
+
 // SetServers sets the Servers of the PathItem.
 func (p *PathItem) SetServers(srvs []Server) *PathItem {
 	p.Servers = slices.Clone(srvs)

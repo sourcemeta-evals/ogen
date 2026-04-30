@@ -44,5 +44,5 @@ func (a User) Equal(b User, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

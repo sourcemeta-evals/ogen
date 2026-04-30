@@ -55,5 +55,5 @@ func (a ParameterValue) Equal(b ParameterValue, depth int) bool {
 			}
 		}
 	}
-	return true
+	return false
 }

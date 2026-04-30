@@ -35,5 +35,5 @@ func (a IssueTypesWorkflowMapping) Equal(b IssueTypesWorkflowMapping, depth int)
 			return false
 		}
 	}
-	return true
+	return false
 }

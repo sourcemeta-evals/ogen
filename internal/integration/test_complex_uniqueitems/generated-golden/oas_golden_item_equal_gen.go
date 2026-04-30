@@ -70,5 +70,5 @@ func (a GoldenItem) Equal(b GoldenItem, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

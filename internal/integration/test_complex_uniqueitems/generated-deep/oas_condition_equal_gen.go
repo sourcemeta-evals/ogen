@@ -41,5 +41,5 @@ func (a Condition) Equal(b Condition, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

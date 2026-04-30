@@ -55,7 +55,8 @@ func (g *Generator) generateEqualMethod(spec *ir.EqualityMethodSpec, pkgName str
 		g.writeFieldComparison(&b, field, spec.NeedsDepthTracking)
 	}
 
-	fmt.Fprintf(&b, "\treturn true\n")
+	// Short-circuit: emit final return after the per-field early-returns above
+	fmt.Fprintf(&b, "\treturn false\n")
 	fmt.Fprintf(&b, "}\n")
 
 	// Write to file

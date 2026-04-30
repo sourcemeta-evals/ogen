@@ -46,5 +46,5 @@ func (a Feature) Equal(b Feature, depth int) bool {
 			}
 		}
 	}
-	return true
+	return false
 }

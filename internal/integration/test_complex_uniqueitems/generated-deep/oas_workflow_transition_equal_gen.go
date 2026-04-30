@@ -47,5 +47,5 @@ func (a WorkflowTransition) Equal(b WorkflowTransition, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

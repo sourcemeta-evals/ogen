@@ -153,5 +153,5 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

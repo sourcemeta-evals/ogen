@@ -46,5 +46,5 @@ func (a Configuration) Equal(b Configuration, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

@@ -23,5 +23,5 @@ func (a Level12) Equal(b Level12, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

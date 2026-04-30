@@ -32,5 +32,5 @@ func (a RuleConfiguration) Equal(b RuleConfiguration, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

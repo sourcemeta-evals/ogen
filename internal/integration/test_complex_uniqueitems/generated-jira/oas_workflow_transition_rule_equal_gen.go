@@ -40,5 +40,5 @@ func (a WorkflowTransitionRule) Equal(b WorkflowTransitionRule, depth int) bool 
 			return false
 		}
 	}
-	return true
+	return false
 }

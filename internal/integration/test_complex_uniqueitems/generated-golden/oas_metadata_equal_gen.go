@@ -46,5 +46,5 @@ func (a Metadata) Equal(b Metadata, depth int) bool {
 			}
 		}
 	}
-	return true
+	return false
 }

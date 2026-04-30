@@ -32,5 +32,5 @@ func (a ParameterGroup) Equal(b ParameterGroup, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

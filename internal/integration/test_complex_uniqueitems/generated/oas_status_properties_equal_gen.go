@@ -41,5 +41,5 @@ func (a StatusProperties) Equal(b StatusProperties, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

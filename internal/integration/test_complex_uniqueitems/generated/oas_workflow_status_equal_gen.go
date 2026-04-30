@@ -38,5 +38,5 @@ func (a WorkflowStatus) Equal(b WorkflowStatus, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

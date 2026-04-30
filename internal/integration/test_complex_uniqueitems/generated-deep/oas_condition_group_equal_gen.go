@@ -32,5 +32,5 @@ func (a ConditionGroup) Equal(b ConditionGroup, depth int) bool {
 			return false
 		}
 	}
-	return true
+	return false
 }

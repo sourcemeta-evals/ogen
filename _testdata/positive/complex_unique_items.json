@@ -1,0 +1,37 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "Test Complex UniqueItems", "version": "0.1.0"},
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "getItems",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/SimpleItem"},
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SimpleItem": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "integer"},
+          "name": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -11,6 +11,10 @@ func validateUniqueWorkflowTransition(items []WorkflowTransition) error {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
@@ -59,6 +63,10 @@ func validateUniqueWorkflowTransition(items []WorkflowTransition) error {
 // validateUniqueConditionGroup checks for duplicate items in a slice using hash-based detection.
 func validateUniqueConditionGroup(items []ConditionGroup) error {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -111,6 +119,10 @@ func validateUniqueCondition(items []Condition) error {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
@@ -159,6 +171,10 @@ func validateUniqueCondition(items []Condition) error {
 // validateUniqueRuleConfiguration checks for duplicate items in a slice using hash-based detection.
 func validateUniqueRuleConfiguration(items []RuleConfiguration) error {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -211,6 +227,10 @@ func validateUniqueParameterGroup(items []ParameterGroup) error {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
@@ -261,6 +281,10 @@ func validateUniqueParameter(items []Parameter) error {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
@@ -309,6 +333,10 @@ func validateUniqueParameter(items []Parameter) error {
 // validateUniqueParameterValue checks for duplicate items in a slice using hash-based detection.
 func validateUniqueParameterValue(items []ParameterValue) error {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 

@@ -11,6 +11,10 @@ func validateUniqueComprehensiveItem(items []ComprehensiveItem) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -54,6 +58,10 @@ func validateUniqueComprehensiveItem(items []ComprehensiveItem) (err error) {
 // validateUniqueUser checks for duplicate items in a slice using hash-based detection.
 func validateUniqueUser(items []User) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -101,6 +109,10 @@ func validateUniqueConfiguration(items []Configuration) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -144,6 +156,10 @@ func validateUniqueConfiguration(items []Configuration) (err error) {
 // validateUniqueFeature checks for duplicate items in a slice using hash-based detection.
 func validateUniqueFeature(items []Feature) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 

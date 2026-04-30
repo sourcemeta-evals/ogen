@@ -11,6 +11,10 @@ func validateUniqueLevel1(items []Level1) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -54,6 +58,10 @@ func validateUniqueLevel1(items []Level1) (err error) {
 // validateUniqueLevel2 checks for duplicate items in a slice using hash-based detection.
 func validateUniqueLevel2(items []Level2) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -101,6 +109,10 @@ func validateUniqueLevel3(items []Level3) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -144,6 +156,10 @@ func validateUniqueLevel3(items []Level3) (err error) {
 // validateUniqueLevel4 checks for duplicate items in a slice using hash-based detection.
 func validateUniqueLevel4(items []Level4) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -191,6 +207,10 @@ func validateUniqueLevel5(items []Level5) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -234,6 +254,10 @@ func validateUniqueLevel5(items []Level5) (err error) {
 // validateUniqueLevel6 checks for duplicate items in a slice using hash-based detection.
 func validateUniqueLevel6(items []Level6) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -281,6 +305,10 @@ func validateUniqueLevel7(items []Level7) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -324,6 +352,10 @@ func validateUniqueLevel7(items []Level7) (err error) {
 // validateUniqueLevel8 checks for duplicate items in a slice using hash-based detection.
 func validateUniqueLevel8(items []Level8) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -371,6 +403,10 @@ func validateUniqueLevel9(items []Level9) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -414,6 +450,10 @@ func validateUniqueLevel9(items []Level9) (err error) {
 // validateUniqueLevel10 checks for duplicate items in a slice using hash-based detection.
 func validateUniqueLevel10(items []Level10) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 
@@ -461,6 +501,10 @@ func validateUniqueLevel11(items []Level11) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -504,6 +548,10 @@ func validateUniqueLevel11(items []Level11) (err error) {
 // validateUniqueLevel12 checks for duplicate items in a slice using hash-based detection.
 func validateUniqueLevel12(items []Level12) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 

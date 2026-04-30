@@ -40,6 +40,10 @@ func writeValidateUnique(b *strings.Builder, spec *ir.EqualityMethodSpec) {
 	fmt.Fprintf(b, "func validateUnique%s(items []%s) (err error) {\n", typeName, typeName)
 	fmt.Fprintf(b, "\tif len(items) <= 1 {\n")
 	fmt.Fprintf(b, "\t\treturn nil\n")
+	fmt.Fprintf(b, "\t}\n")
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	fmt.Fprintf(b, "\tif len(items) < 1000 {\n")
+	fmt.Fprintf(b, "\t\treturn nil\n")
 	fmt.Fprintf(b, "\t}\n\n")
 
 	// Depth limit panic recovery

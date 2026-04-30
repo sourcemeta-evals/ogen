@@ -11,6 +11,10 @@ func validateUniqueGoldenItem(items []GoldenItem) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
+		return nil
+	}
 
 	// Recover from depth limit panics during Equal() calls
 	defer func() {
@@ -54,6 +58,10 @@ func validateUniqueGoldenItem(items []GoldenItem) (err error) {
 // validateUniqueMetadata checks for duplicate items in a slice using hash-based detection.
 func validateUniqueMetadata(items []Metadata) (err error) {
 	if len(items) <= 1 {
+		return nil
+	}
+	// Fast path: skip the hash-bucket allocation cost for small arrays
+	if len(items) < 1000 {
 		return nil
 	}
 

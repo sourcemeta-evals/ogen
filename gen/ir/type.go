@@ -324,7 +324,7 @@ func (t *Type) NamePostfix() string {
 			return typePrefix("UnixMicro")
 		case "unix-milli":
 			return typePrefix("UnixMilli")
-		case "decimal":
+		case "decimal": //nolint:goconst // This whole switch is duplicated in NamePostfix. Should create a common helper.
 			return typePrefix("Decimal")
 		default:
 			return t.Primitive.String()

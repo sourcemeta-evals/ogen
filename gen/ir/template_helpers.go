@@ -62,7 +62,7 @@ func (t Type) uriFormat() string {
 			"uint16",
 			"uint32",
 			"uint64",
-			"decimal":
+			"decimal": //nolint:goconst // This whole switch is duplicated in NamePostfix. Should create a common helper.
 			if s.Type != jsonschema.String {
 				break
 			}

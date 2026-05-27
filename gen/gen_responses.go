@@ -180,7 +180,7 @@ func addRawResponseTypes(ctx *genctx, result *ir.Responses, iface *ir.Type, opNa
 				Doc:  fmt.Sprintf("%s represents raw HTTP response for %s %s.", rawTypeName, opName, contentType),
 				Fields: []*ir.Field{
 					{
-						Name: "Response",
+						Name: "Response", //nolint:goconst // generated-code field name, not a magic string
 						Type: ir.Pointer(&ir.Type{
 							Kind:      ir.KindPrimitive,
 							Primitive: "http.Response",
@@ -279,7 +279,7 @@ func (g *Generator) responseToIR(
 		injectHeaderFields(headers, t)
 		if withStatusCode {
 			t.Fields = append(t.Fields, &ir.Field{
-				Name: "StatusCode",
+				Name: "StatusCode", //nolint:goconst // generated-code field name, not a magic string
 				Type: ir.Primitive(ir.Int, nil),
 			})
 		}

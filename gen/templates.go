@@ -59,7 +59,7 @@ type Elem struct {
 func (e Elem) NextVar() string {
 	if !e.Sub {
 		// No recursion, returning default name.
-		return "elem"
+		return "elem" //nolint:goconst // template-helper default identifier, not a magic string
 	}
 	return e.Var + "Elem"
 }

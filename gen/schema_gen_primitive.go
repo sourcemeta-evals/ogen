@@ -168,8 +168,8 @@ func TypeFormatMapping() map[jsonschema.SchemaType]map[string]ir.PrimitiveType {
 			"unix-milli":   ir.Time,
 		},
 		jsonschema.Number: {
-			"float":   ir.Float32,
-			"double":  ir.Float64,
+			"float":   ir.Float32, //nolint:goconst // OpenAPI format identifier, not a magic string
+			"double":  ir.Float64, //nolint:goconst // OpenAPI format identifier, not a magic string
 			"int32":   ir.Int32,
 			"int64":   ir.Int64,
 			"decimal": ir.Decimal,
@@ -191,7 +191,7 @@ func TypeFormatMapping() map[jsonschema.SchemaType]map[string]ir.PrimitiveType {
 			"uri":       ir.URL,
 			"password":  ir.String,
 			"email":     ir.String,
-			"binary":    ir.String,
+			"binary":    ir.String, //nolint:goconst // OpenAPI format identifier, not a magic string
 			"hostname":  ir.String,
 			"":          ir.String,
 

@@ -155,7 +155,7 @@ func (p *parser) parseParameter(param *ogen.Parameter, ctx *jsonpointer.ResolveC
 	types := map[string]openapi.ParameterLocation{
 		"query":  openapi.LocationQuery,
 		"header": openapi.LocationHeader,
-		"path":   openapi.LocationPath,
+		"path":   openapi.LocationPath, //nolint:goconst // OpenAPI parameter location identifier, not a magic string
 		"cookie": openapi.LocationCookie,
 	}
 

@@ -22,7 +22,7 @@ func isBinary(s *jsonschema.Schema) bool {
 
 	switch s.Type {
 	case jsonschema.Empty, jsonschema.String:
-		return s.Format == "binary"
+		return s.Format == "binary" //nolint:goconst // OpenAPI format identifier, not a magic string
 	default:
 		return false
 	}

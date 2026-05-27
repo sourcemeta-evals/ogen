@@ -20,3 +20,8 @@ paths:
         responses:
           "200":
             description: OK
+      Notify:
+        operationId: notifyResource
+        responses:
+          "200":
+            description: OK

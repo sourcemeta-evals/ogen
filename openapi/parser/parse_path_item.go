@@ -74,8 +74,10 @@ func (p *parser) parsePathItem(
 		// Validate that additionalOperations don't contain any
 		// any entry for the methods that can be defined by other fixed fields.
 		for method := range item.AdditionalOperations {
+			//nolint:goconst // fixed-field HTTP method names per OpenAPI 3.2 PathItem spec
 			switch strings.ToLower(method) {
 			case "get", "put", "post", "delete", "options", "head", "patch", "trace", "query":
+
 				err := errors.Errorf("entry for method %q is not allowed", method)
 				return nil, p.wrapField("additionalOperations", p.file(ctx), locator, err)
 			default:

@@ -32,7 +32,7 @@ func (g *Generator) generateSecurityAPIKey(
 			Type: ir.Primitive(ir.String, nil),
 		},
 		&ir.Field{
-			Name: "Roles",
+			Name: "Roles", //nolint:goconst // generated-code field name, not a magic string
 			Type: ir.Array(ir.Primitive(ir.String, nil), ir.NilOptional, nil),
 		},
 	)
@@ -182,9 +182,9 @@ func (g *Generator) generateSecurity(ctx *genctx, operationName string, spec ope
 	switch typ := security.Type; typ {
 	case "apiKey":
 		return g.generateSecurityAPIKey(s, operationName, spec)
-	case "http":
+	case "http": //nolint:goconst // OpenAPI security scheme identifier, not a magic string
 		return g.generateSecurityHTTP(s, operationName, spec)
-	case "oauth2":
+	case "oauth2": //nolint:goconst // OpenAPI security scheme identifier, not a magic string
 		return g.generateSecurityOauth2(s, operationName, spec), nil
 	case "openIdConnect", "mutualTLS":
 		return nil, &ErrNotImplemented{Name: fmt.Sprintf("%s security", typ)}

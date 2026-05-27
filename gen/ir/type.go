@@ -340,7 +340,7 @@ func (t *Type) NamePostfix() string {
 		case "date":
 			return "Date"
 		case "time":
-			return "Time"
+			return "Time" //nolint:goconst // Go standard-library type name, not a magic string
 		case "date-time":
 			return "DateTime"
 		case "http-date":

@@ -21,7 +21,7 @@ var errNotAbsolute = errors.New("path is not absolute")
 
 // URLToFilePath converts a file-scheme url to a file path.
 func URLToFilePath(u *url.URL) (string, error) {
-	if u.Scheme != "file" {
+	if u.Scheme != "file" { //nolint:goconst // URL scheme identifier, not a magic string
 		return "", errors.New("non-file URL")
 	}
 

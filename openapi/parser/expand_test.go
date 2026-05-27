@@ -50,11 +50,15 @@ func TestExpand_PathItemMethods(t *testing.T) {
 	require.NotNil(t, pi.Query, "Query field must survive expand")
 	require.Equal(t, "queryResource", pi.Query.OperationID)
 
-	require.Len(t, pi.AdditionalOperations, 2)
+	require.Len(t, pi.AdditionalOperations, 3)
 	require.Contains(t, pi.AdditionalOperations, "LINK", "uppercase additionalOperations keys must be preserved through expand")
 	require.Contains(t, pi.AdditionalOperations, "UNLINK", "uppercase additionalOperations keys must be preserved through expand")
+	require.Contains(t, pi.AdditionalOperations, "Notify", "mixed-case additionalOperations keys must be preserved through expand")
 	require.NotContains(t, pi.AdditionalOperations, "link")
 	require.NotContains(t, pi.AdditionalOperations, "unlink")
+	require.NotContains(t, pi.AdditionalOperations, "notify")
+	require.NotContains(t, pi.AdditionalOperations, "NOTIFY")
 	require.Equal(t, "linkResource", pi.AdditionalOperations["LINK"].OperationID)
 	require.Equal(t, "unlinkResource", pi.AdditionalOperations["UNLINK"].OperationID)
+	require.Equal(t, "notifyResource", pi.AdditionalOperations["Notify"].OperationID)
 }

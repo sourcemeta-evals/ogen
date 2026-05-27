@@ -63,11 +63,11 @@ func (e *expander) Spec(api *openapi.API) (spec *ogen.Spec, err error) {
 	setOperation := func(pi *ogen.PathItem, method string, op *ogen.Operation) error {
 		var ptr **ogen.Operation
 		switch m := strings.ToLower(method); m {
-		case "get":
+		case "get": //nolint:goconst // HTTP method name, not a magic string
 			ptr = &pi.Get
 		case "put":
 			ptr = &pi.Put
-		case "post":
+		case "post": //nolint:goconst // HTTP method name, not a magic string
 			ptr = &pi.Post
 		case "delete":
 			ptr = &pi.Delete
@@ -82,14 +82,14 @@ func (e *expander) Spec(api *openapi.API) (spec *ogen.Spec, err error) {
 		case "query":
 			ptr = &pi.Query
 		default:
-			if pi.AdditionalOperations != nil {
-				if _, ok := pi.AdditionalOperations[method]; ok {
-					return errors.Errorf("path item already contains %q operation", method)
-				}
-				pi.AdditionalOperations[method] = op
-				return nil
+			if pi.AdditionalOperations == nil {
+				pi.AdditionalOperations = make(map[string]*ogen.Operation)
 			}
-			return errors.Errorf("unexpected method %q", method)
+			if _, ok := pi.AdditionalOperations[method]; ok {
+				return errors.Errorf("path item already contains %q operation", method)
+			}
+			pi.AdditionalOperations[method] = op
+			return nil
 		}
 
 		if existing := *ptr; existing != nil {
@@ -111,9 +111,6 @@ func (e *expander) Spec(api *openapi.API) (spec *ogen.Spec, err error) {
 		pi := spec.Paths[path]
 		if pi == nil {
 			pi = &ogen.PathItem{}
-			if api.Version.Minor >= 2 {
-				pi.AdditionalOperations = make(map[string]*ogen.Operation)
-			}
 			if spec.Paths == nil {
 				spec.Paths = ogen.Paths{}
 			}

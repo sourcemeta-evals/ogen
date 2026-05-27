@@ -117,9 +117,6 @@ linters:
       - linters:
           - goconst
         text: string `(query)`
-      - linters:
-          - goconst
-        text: string `(Response|StatusCode|Roles|http|oauth2|encoding|Time|elem|binary|file|get|post|path|float|double)`
       - linters: [revive]
         text: avoid.+package names
     paths:

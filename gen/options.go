@@ -101,7 +101,7 @@ func (o *ParseOptions) SetLocation(p string, opts RemoteOptions) ([]byte, error)
 	containsDrive := runtime.GOOS == "windows" && filepath.VolumeName(p) != ""
 	if u, _ := url.Parse(p); u != nil && !containsDrive && u.Scheme != "" {
 		switch u.Scheme {
-		case "http", "https":
+		case "http", "https": //nolint:goconst // URL scheme identifier, not a magic string
 			_, fileName := path.Split(u.Path)
 
 			// FIXME(tdakkota): pass context.

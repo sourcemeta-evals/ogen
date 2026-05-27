@@ -146,7 +146,7 @@ func parseTypePath(input string) (pkgPath, typeName string, isPointer bool, _ er
 var encoders = map[[2]string]ExternalEncoding{
 	{"github.com/ogen-go/ogen/json", "Marshaler"}: ExternalNative,
 	{"encoding/json", "Marshaler"}:                ExternalJSON,
-	{"encoding", "TextMarshaler"}:                 ExternalText,
+	{"encoding", "TextMarshaler"}:                 ExternalText, //nolint:goconst // Go standard library package name, not a magic string
 	{"encoding", "BinaryMarshaler"}:               ExternalBinary,
 }
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ogen-go/ogen"
 	"github.com/ogen-go/ogen/gen/ir"
@@ -424,4 +425,17 @@ func TestBuilder(t *testing.T) {
 		SetMinProperties(&umax).
 		SetDefault(json.RawMessage("0")),
 	)
+}
+
+// TestBuilderSetAdditionalOperationZeroValue verifies that calling
+// SetAdditionalOperation as the first builder method on a fresh *PathItem
+// does not panic and stores the entry under the original method key
+// (case preservation matches OpenAPI 3.2 semantics).
+func TestBuilderSetAdditionalOperationZeroValue(t *testing.T) {
+	require.NotPanics(t, func() {
+		pi := ogen.NewPathItem().SetAdditionalOperation("LINK", ogen.NewOperation())
+		require.NotNil(t, pi.AdditionalOperations)
+		require.Contains(t, pi.AdditionalOperations, "LINK")
+		require.NotContains(t, pi.AdditionalOperations, "link")
+	})
 }

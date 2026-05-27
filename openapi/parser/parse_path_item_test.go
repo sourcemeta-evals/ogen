@@ -321,3 +321,132 @@ func TestDuplicatePathsSameMethod(t *testing.T) {
 	a.Error(err)
 	a.Contains(err.Error(), "duplicate path")
 }
+
+// TestPathItemSharedParametersOnNewMethods verifies that PathItem-level
+// parameters are inherited by `query` and `additionalOperations` operations,
+// which relies on `getPathMethods` correctly enumerating the new methods
+// (including lowercasing of custom-method keys for downstream comparisons).
+func TestPathItemSharedParametersOnNewMethods(t *testing.T) {
+	root := &ogen.Spec{
+		OpenAPI: "3.2.0",
+		Paths: map[string]*ogen.PathItem{
+			"/resource/{id}": {
+				Parameters: []*ogen.Parameter{
+					{
+						Name:     "id",
+						In:       "path",
+						Required: true,
+						Schema:   &ogen.Schema{Type: "string"},
+					},
+				},
+				Query: &ogen.Operation{
+					OperationID: "queryResource",
+					Responses: map[string]*ogen.Response{
+						"200": {Description: "OK"},
+					},
+				},
+				AdditionalOperations: map[string]*ogen.Operation{
+					"LINK": {
+						OperationID: "linkResource",
+						Responses: map[string]*ogen.Response{
+							"200": {Description: "OK"},
+						},
+					},
+					"Notify": {
+						OperationID: "notifyResource",
+						Responses: map[string]*ogen.Response{
+							"200": {Description: "OK"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	a := require.New(t)
+
+	var raw yaml.Node
+	a.NoError(raw.Encode(root))
+	root.Raw = &raw
+
+	spec, err := Parse(root, Settings{
+		RootURL: testRootURL,
+	})
+	a.NoError(err)
+
+	// Three operations: Query + LINK + Notify, all on /resource/{id}.
+	a.Len(spec.Operations, 3)
+
+	byID := make(map[string]*openapi.Operation, len(spec.Operations))
+	for _, op := range spec.Operations {
+		byID[op.OperationID] = op
+	}
+	a.Contains(byID, "queryResource")
+	a.Contains(byID, "linkResource")
+	a.Contains(byID, "notifyResource")
+
+	// Each operation must inherit the PathItem-level `id` path parameter.
+	for _, opID := range []string{"queryResource", "linkResource", "notifyResource"} {
+		op := byID[opID]
+		a.NotNil(op, "operation %q must be parsed", opID)
+		a.Equal("/resource/{id}", op.Path.String(), "operation %q on /resource/{id}", opID)
+		var found bool
+		for _, param := range op.Parameters {
+			if param.Name == "id" && param.In == openapi.LocationPath {
+				found = true
+				break
+			}
+		}
+		a.True(found, "operation %q must inherit the PathItem `id` path parameter", opID)
+	}
+}
+
+// TestPathItemDuplicateCustomMethodAcrossNormalizedPaths verifies that
+// `getPathMethods` lowercases `additionalOperations` keys: two paths with
+// the same normalized shape and the same custom method spelled with
+// different capitalization must be detected as a duplicate-path conflict.
+func TestPathItemDuplicateCustomMethodAcrossNormalizedPaths(t *testing.T) {
+	root := &ogen.Spec{
+		OpenAPI: "3.2.0",
+		Paths: map[string]*ogen.PathItem{
+			"/resource/{a}": {
+				Parameters: []*ogen.Parameter{
+					{Name: "a", In: "path", Required: true, Schema: &ogen.Schema{Type: "string"}},
+				},
+				AdditionalOperations: map[string]*ogen.Operation{
+					"LINK": {
+						OperationID: "linkResourceA",
+						Responses: map[string]*ogen.Response{
+							"200": {Description: "OK"},
+						},
+					},
+				},
+			},
+			"/resource/{b}": {
+				Parameters: []*ogen.Parameter{
+					{Name: "b", In: "path", Required: true, Schema: &ogen.Schema{Type: "string"}},
+				},
+				AdditionalOperations: map[string]*ogen.Operation{
+					"link": {
+						OperationID: "linkResourceB",
+						Responses: map[string]*ogen.Response{
+							"200": {Description: "OK"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	a := require.New(t)
+
+	var raw yaml.Node
+	a.NoError(raw.Encode(root))
+	root.Raw = &raw
+
+	_, err := Parse(root, Settings{
+		RootURL: testRootURL,
+	})
+	a.Error(err)
+	a.Contains(err.Error(), "duplicate path")
+}

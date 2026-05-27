@@ -12,6 +12,14 @@ type Handler interface {
 	//
 	// LINK /echo
 	Echo(ctx context.Context, req EchoReq) (EchoOK, error)
+	// QueryEcho implements queryEcho operation.
+	//
+	// QUERY /echo
+	QueryEcho(ctx context.Context, req QueryEchoReq) (QueryEchoOK, error)
+	// UnlinkEcho implements unlinkEcho operation.
+	//
+	// UNLINK /echo
+	UnlinkEcho(ctx context.Context, req UnlinkEchoReq) (UnlinkEchoOK, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

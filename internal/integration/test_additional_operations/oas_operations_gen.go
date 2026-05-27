@@ -6,5 +6,7 @@ package api
 type OperationName = string
 
 const (
-	EchoOperation OperationName = "Echo"
+	EchoOperation       OperationName = "Echo"
+	QueryEchoOperation  OperationName = "QueryEcho"
+	UnlinkEchoOperation OperationName = "UnlinkEcho"
 )

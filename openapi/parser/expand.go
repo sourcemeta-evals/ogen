@@ -83,10 +83,10 @@ func (e *expander) Spec(api *openapi.API) (spec *ogen.Spec, err error) {
 			ptr = &pi.Query
 		default:
 			if pi.AdditionalOperations != nil {
-				if _, ok := pi.AdditionalOperations[m]; ok {
+				if _, ok := pi.AdditionalOperations[method]; ok {
 					return errors.Errorf("path item already contains %q operation", method)
 				}
-				pi.AdditionalOperations[m] = op
+				pi.AdditionalOperations[method] = op
 				return nil
 			}
 			return errors.Errorf("unexpected method %q", method)

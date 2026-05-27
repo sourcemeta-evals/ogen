@@ -338,9 +338,9 @@ type PathItem struct {
 }
 
 // MarshalJSON implements [json.Marshaler].
-func (p *PathItem) MarshalJSON() ([]byte, error) {
+func (s *PathItem) MarshalJSON() ([]byte, error) {
 	type Alias PathItem
-	originalJSON, err := json.Marshal(Alias(*p))
+	originalJSON, err := json.Marshal(Alias(*s))
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +362,7 @@ func (p *PathItem) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	for extK, extV := range p.Common.Extensions {
+	for extK, extV := range s.Common.Extensions {
 		e.FieldStart(extK)
 		e.Str(extV.Value)
 	}
@@ -427,9 +427,9 @@ type Operation struct {
 }
 
 // MarshalJSON implements [json.Marshaler].
-func (o *Operation) MarshalJSON() ([]byte, error) {
+func (s *Operation) MarshalJSON() ([]byte, error) {
 	type Alias Operation
-	originalJSON, err := json.Marshal(Alias(*o))
+	originalJSON, err := json.Marshal(Alias(*s))
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +450,7 @@ func (o *Operation) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	for extK, extV := range o.Common.Extensions {
+	for extK, extV := range s.Common.Extensions {
 		e.FieldStart(extK)
 		e.Str(extV.Value)
 	}

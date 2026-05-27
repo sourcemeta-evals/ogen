@@ -61,8 +61,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				switch r.Method {
 				case "LINK":
 					s.handleEchoRequest([0]string{}, elemIsEscaped, w, r)
+				case "QUERY":
+					s.handleQueryEchoRequest([0]string{}, elemIsEscaped, w, r)
+				case "UNLINK":
+					s.handleUnlinkEchoRequest([0]string{}, elemIsEscaped, w, r)
 				default:
-					s.notAllowed(w, r, "LINK")
+					s.notAllowed(w, r, "LINK,QUERY,UNLINK")
 				}
 
 				return
@@ -169,6 +173,24 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					r.name = EchoOperation
 					r.summary = ""
 					r.operationID = "echo"
+					r.operationGroup = ""
+					r.pathPattern = "/echo"
+					r.args = args
+					r.count = 0
+					return r, true
+				case "QUERY":
+					r.name = QueryEchoOperation
+					r.summary = ""
+					r.operationID = "queryEcho"
+					r.operationGroup = ""
+					r.pathPattern = "/echo"
+					r.args = args
+					r.count = 0
+					return r, true
+				case "UNLINK":
+					r.name = UnlinkEchoOperation
+					r.summary = ""
+					r.operationID = "unlinkEcho"
 					r.operationGroup = ""
 					r.pathPattern = "/echo"
 					r.args = args

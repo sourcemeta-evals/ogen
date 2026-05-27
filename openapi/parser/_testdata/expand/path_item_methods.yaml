@@ -1,0 +1,22 @@
+openapi: 3.2.0
+info:
+  version: 1.0.0
+  title: path_item_methods
+paths:
+  /resource:
+    query:
+      operationId: queryResource
+      responses:
+        "200":
+          description: OK
+    additionalOperations:
+      LINK:
+        operationId: linkResource
+        responses:
+          "200":
+            description: OK
+      UNLINK:
+        operationId: unlinkResource
+        responses:
+          "200":
+            description: OK

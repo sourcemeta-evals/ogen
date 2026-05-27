@@ -19,3 +19,17 @@ var _ Handler = UnimplementedHandler{}
 func (UnimplementedHandler) Echo(ctx context.Context, req EchoReq) (r EchoOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
+
+// QueryEcho implements queryEcho operation.
+//
+// QUERY /echo
+func (UnimplementedHandler) QueryEcho(ctx context.Context, req QueryEchoReq) (r QueryEchoOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UnlinkEcho implements unlinkEcho operation.
+//
+// UNLINK /echo
+func (UnimplementedHandler) UnlinkEcho(ctx context.Context, req UnlinkEchoReq) (r UnlinkEchoOK, _ error) {
+	return r, ht.ErrNotImplemented
+}

@@ -4,9 +4,35 @@ info:
   version: v0.1.0
 paths:
   /echo:
+    query:
+      operationId: queryEcho
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema: { type: string }
     additionalOperations:
       link:
         operationId: echo
+        requestBody:
+          required: true
+          content:
+            text/plain:
+              schema: { type: string }
+        responses:
+          "200":
+            description: OK
+            content:
+              text/plain:
+                schema: { type: string }
+      unlink:
+        operationId: unlinkEcho
         requestBody:
           required: true
           content:

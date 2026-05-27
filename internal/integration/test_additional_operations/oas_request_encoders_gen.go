@@ -17,3 +17,23 @@ func encodeEchoRequest(
 	ht.SetBody(r, body, contentType)
 	return nil
 }
+
+func encodeQueryEchoRequest(
+	req QueryEchoReq,
+	r *http.Request,
+) error {
+	const contentType = "text/plain"
+	body := req
+	ht.SetBody(r, body, contentType)
+	return nil
+}
+
+func encodeUnlinkEchoRequest(
+	req UnlinkEchoReq,
+	r *http.Request,
+) error {
+	const contentType = "text/plain"
+	body := req
+	ht.SetBody(r, body, contentType)
+	return nil
+}

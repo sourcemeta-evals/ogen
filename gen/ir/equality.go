@@ -44,6 +44,10 @@ type FieldEqualitySpec struct {
 
 	// IsByteSlice indicates if this field is a byte slice ([]byte / jx.Raw)
 	IsByteSlice bool
+
+	// IsOptionalNullable indicates that the FieldTypeOptional wrapper is an
+	// OptNilT (both Set and Null flags present), not a plain OptT
+	IsOptionalNullable bool
 }
 
 // FieldTypeCategory classifies fields for equality comparison.

@@ -248,15 +248,16 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			}
 
 			fieldSpec := ir.FieldEqualitySpec{
-				FieldName:         field.Name,
-				FieldType:         categorizeFieldType(field.Type),
-				GoType:            goType,
-				IsNested:          isNestedObject(field.Type),
-				IsMap:             isMap,
-				IsArray:           isArray,
-				IsArrayOfStructs:  isArrayOfStructs,
-				IsArrayOfNullable: isArrayOfNullable,
-				IsByteSlice:       isByteSlice,
+				FieldName:          field.Name,
+				FieldType:          categorizeFieldType(field.Type),
+				GoType:             goType,
+				IsNested:           isNestedObject(field.Type),
+				IsMap:              isMap,
+				IsArray:            isArray,
+				IsArrayOfStructs:   isArrayOfStructs,
+				IsArrayOfNullable:  isArrayOfNullable,
+				IsByteSlice:        isByteSlice,
+				IsOptionalNullable: isOptionalNullable(field.Type),
 			}
 			spec.Fields = append(spec.Fields, fieldSpec)
 		}
@@ -336,6 +337,29 @@ func isNestedObject(t *ir.Type) bool {
 	default:
 		return false
 	}
+}
+
+// isOptionalNullable returns true when t is an OptNilT wrapper, which carries
+// both Set and Null flags. Plain OptT (Set only) and NilT (Null only) return
+// false.
+func isOptionalNullable(t *ir.Type) bool {
+	if t == nil {
+		return false
+	}
+	name := ""
+	switch t.Kind {
+	case ir.KindGeneric, ir.KindStruct:
+		name = t.Name
+	case ir.KindAlias:
+		if t.AliasTo != nil {
+			return isOptionalNullable(t.AliasTo)
+		}
+		return false
+	default:
+		return false
+	}
+	const prefixOptNil = "OptNil"
+	return len(name) > len(prefixOptNil) && name[:len(prefixOptNil)] == prefixOptNil
 }
 
 // categorizeFieldType maps an IR type to a FieldTypeCategory

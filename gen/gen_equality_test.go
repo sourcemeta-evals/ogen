@@ -344,6 +344,90 @@ func TestWriteFieldComparison_OptionalArray(t *testing.T) {
 	}
 }
 
+func TestWriteFieldComparison_OptionalNullable(t *testing.T) {
+	tests := []struct {
+		name             string
+		field            ir.FieldEqualitySpec
+		hasDepth         bool
+		expectedContains []string
+		notContains      []string
+	}{
+		{
+			name: "optional-nullable primitive",
+			field: ir.FieldEqualitySpec{
+				FieldName:          "Name",
+				FieldType:          ir.FieldTypeOptional,
+				IsOptionalNullable: true,
+			},
+			hasDepth: false,
+			expectedContains: []string{
+				"// Compare optional field: Name",
+				"if a.Name.Set != b.Name.Set",
+				"if a.Name.Set {",
+				"if a.Name.Null != b.Name.Null",
+				"if !a.Name.Null {",
+				"if a.Name.Value != b.Name.Value",
+			},
+		},
+		{
+			name: "optional-nullable nested struct with depth",
+			field: ir.FieldEqualitySpec{
+				FieldName:          "Nested",
+				FieldType:          ir.FieldTypeOptional,
+				IsOptionalNullable: true,
+				IsNested:           true,
+			},
+			hasDepth: true,
+			expectedContains: []string{
+				"// Compare optional field: Nested",
+				"if a.Nested.Set != b.Nested.Set",
+				"if a.Nested.Set {",
+				"if a.Nested.Null != b.Nested.Null",
+				"if !a.Nested.Null {",
+				"if !a.Nested.Value.Equal(b.Nested.Value, depth+1)",
+			},
+		},
+		{
+			name: "plain optional (not nullable) omits Null check",
+			field: ir.FieldEqualitySpec{
+				FieldName:          "Age",
+				FieldType:          ir.FieldTypeOptional,
+				IsOptionalNullable: false,
+			},
+			hasDepth: false,
+			expectedContains: []string{
+				"// Compare optional field: Age",
+				"if a.Age.Set != b.Age.Set",
+				"if a.Age.Set {",
+				"if a.Age.Value != b.Age.Value",
+			},
+			notContains: []string{
+				"if a.Age.Null != b.Age.Null",
+				"if !a.Age.Null {",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b strings.Builder
+			g := &Generator{}
+
+			g.writeFieldComparison(&b, tt.field, tt.hasDepth)
+
+			output := b.String()
+			for _, expected := range tt.expectedContains {
+				require.Contains(t, output, expected,
+					"output should contain: %s", expected)
+			}
+			for _, notExpected := range tt.notContains {
+				require.NotContains(t, output, notExpected,
+					"output should NOT contain: %s", notExpected)
+			}
+		})
+	}
+}
+
 func TestWriteFieldComparison_NullableArray(t *testing.T) {
 	tests := []struct {
 		name             string

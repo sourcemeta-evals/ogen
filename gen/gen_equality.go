@@ -81,40 +81,51 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		}
 
 	case ir.FieldTypeOptional:
-		// Optional field comparison (OptT types)
+		// Optional field comparison (OptT and OptNilT types)
 		fmt.Fprintf(b, "\t// Compare optional field: %s\n", field.FieldName)
 		fmt.Fprintf(b, "\tif a.%s.Set != b.%s.Set {\n", field.FieldName, field.FieldName)
 		fmt.Fprintf(b, "\t\treturn false\n")
 		fmt.Fprintf(b, "\t}\n")
 		fmt.Fprintf(b, "\tif a.%s.Set {\n", field.FieldName)
+		valueIndent := "\t\t"
+		if field.IsOptionalNullable {
+			fmt.Fprintf(b, "\t\tif a.%s.Null != b.%s.Null {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
+			fmt.Fprintf(b, "\t\tif !a.%s.Null {\n", field.FieldName)
+			valueIndent = "\t\t\t"
+		}
 		switch {
 		case field.IsNested:
 			// Optional wrapper around nested object - call Equal()
 			if hasDepth {
-				fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value, depth+1) {\n", field.FieldName, field.FieldName)
+				fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value, depth+1) {\n", valueIndent, field.FieldName, field.FieldName)
 			} else {
-				fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) {\n", field.FieldName, field.FieldName)
+				fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
 			}
-			fmt.Fprintf(b, "\t\t\treturn false\n")
-			fmt.Fprintf(b, "\t\t}\n")
+			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
+			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsMap:
 			// Optional wrapper around map - need custom comparison
-			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), "\t\t")
+			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), valueIndent)
 		case field.IsArray:
 			// Optional wrapper around array - need iteration
 			aArray := fmt.Sprintf("a.%s.Value", field.FieldName)
 			bArray := fmt.Sprintf("b.%s.Value", field.FieldName)
-			g.writeArrayComparisonWithNullable(b, aArray, bArray, "\t\t",
+			g.writeArrayComparisonWithNullable(b, aArray, bArray, valueIndent,
 				field.IsArrayOfStructs, field.IsArrayOfNullable, hasDepth)
 		case field.IsByteSlice:
 			// Optional wrapper around byte slice - use bytes.Equal()
-			fmt.Fprintf(b, "\t\tif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
-			fmt.Fprintf(b, "\t\t\treturn false\n")
-			fmt.Fprintf(b, "\t\t}\n")
+			fmt.Fprintf(b, "%sif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
+			fmt.Fprintf(b, "%s}\n", valueIndent)
 		default:
 			// Optional wrapper around primitive - use !=
-			fmt.Fprintf(b, "\t\tif a.%s.Value != b.%s.Value {\n", field.FieldName, field.FieldName)
-			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "%sif a.%s.Value != b.%s.Value {\n", valueIndent, field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
+			fmt.Fprintf(b, "%s}\n", valueIndent)
+		}
+		if field.IsOptionalNullable {
 			fmt.Fprintf(b, "\t\t}\n")
 		}
 		fmt.Fprintf(b, "\t}\n")

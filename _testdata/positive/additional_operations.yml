@@ -18,7 +18,7 @@ paths:
             text/plain:
               schema: { type: string }
     additionalOperations:
-      link:
+      LINK:
         operationId: echo
         requestBody:
           required: true
@@ -31,7 +31,7 @@ paths:
             content:
               text/plain:
                 schema: { type: string }
-      unlink:
+      UNLINK:
         operationId: unlinkEcho
         requestBody:
           required: true

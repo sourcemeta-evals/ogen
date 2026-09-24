@@ -28,11 +28,31 @@ func (s *Error) encodeFields(e *jx.Encoder) {
 		e.FieldStart("message")
 		e.Str(s.Message)
 	}
+	{
+		e.FieldStart("status")
+		e.Str("error")
+	}
+	{
+		e.FieldStart("fatal")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("ratio")
+		e.Float64(0.5)
+	}
+	{
+		e.FieldStart("hint")
+		e.Str("retry")
+	}
 }
 
-var jsonFieldsNameOfError = [2]string{
+var jsonFieldsNameOfError = [6]string{
 	0: "code",
 	1: "message",
+	2: "status",
+	3: "fatal",
+	4: "ratio",
+	5: "hint",
 }
 
 // Decode decodes Error from json.
@@ -68,6 +88,52 @@ func (s *Error) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"message\"")
 			}
+		case "status":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Status = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "fatal":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Bool()
+				s.Fatal = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fatal\"")
+			}
+		case "ratio":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Float64()
+				s.Ratio = float64(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ratio\"")
+			}
+		case "hint":
+			if err := func() error {
+				s.Hint.Reset()
+				if err := s.Hint.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"hint\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -78,7 +144,7 @@ func (s *Error) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00011111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

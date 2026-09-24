@@ -106,6 +106,9 @@ components:
       required:
         - code
         - message
+        - status
+        - fatal
+        - ratio
       properties:
         code:
           type: integer
@@ -113,3 +116,16 @@ components:
           const: 400
         message:
           type: string
+        status:
+          type: string
+          const: "error"
+        fatal:
+          type: boolean
+          const: true
+        ratio:
+          type: number
+          format: double
+          const: 0.5
+        hint:
+          type: string
+          const: "retry"

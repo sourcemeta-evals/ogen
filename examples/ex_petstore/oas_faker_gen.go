@@ -14,6 +14,26 @@ func (s *Error) SetFake() {
 			s.Message = "string"
 		}
 	}
+	{
+		{
+			s.Status = "string"
+		}
+	}
+	{
+		{
+			s.Fatal = true
+		}
+	}
+	{
+		{
+			s.Ratio = float64(0)
+		}
+	}
+	{
+		{
+			s.Hint.SetFake()
+		}
+	}
 }
 
 // SetFake set fake values.

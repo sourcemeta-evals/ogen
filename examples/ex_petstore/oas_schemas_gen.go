@@ -15,8 +15,12 @@ type CreatePetsCreated struct{}
 
 // Ref: #/components/schemas/Error
 type Error struct {
-	Code    int32  `json:"code"`
-	Message string `json:"message"`
+	Code    int32     `json:"code"`
+	Message string    `json:"message"`
+	Status  string    `json:"status"`
+	Fatal   bool      `json:"fatal"`
+	Ratio   float64   `json:"ratio"`
+	Hint    OptString `json:"hint"`
 }
 
 // GetCode returns the value of Code.
@@ -29,6 +33,26 @@ func (s *Error) GetMessage() string {
 	return s.Message
 }
 
+// GetStatus returns the value of Status.
+func (s *Error) GetStatus() string {
+	return s.Status
+}
+
+// GetFatal returns the value of Fatal.
+func (s *Error) GetFatal() bool {
+	return s.Fatal
+}
+
+// GetRatio returns the value of Ratio.
+func (s *Error) GetRatio() float64 {
+	return s.Ratio
+}
+
+// GetHint returns the value of Hint.
+func (s *Error) GetHint() OptString {
+	return s.Hint
+}
+
 // SetCode sets the value of Code.
 func (s *Error) SetCode(val int32) {
 	s.Code = val
@@ -37,6 +61,26 @@ func (s *Error) SetCode(val int32) {
 // SetMessage sets the value of Message.
 func (s *Error) SetMessage(val string) {
 	s.Message = val
+}
+
+// SetStatus sets the value of Status.
+func (s *Error) SetStatus(val string) {
+	s.Status = val
+}
+
+// SetFatal sets the value of Fatal.
+func (s *Error) SetFatal(val bool) {
+	s.Fatal = val
+}
+
+// SetRatio sets the value of Ratio.
+func (s *Error) SetRatio(val float64) {
+	s.Ratio = val
+}
+
+// SetHint sets the value of Hint.
+func (s *Error) SetHint(val OptString) {
+	s.Hint = val
 }
 
 // ErrorStatusCode wraps Error with StatusCode.

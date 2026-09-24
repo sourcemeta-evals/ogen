@@ -25,12 +25,6 @@ func (c *Const) UnmarshalYAML(node *yaml.Node) error {
 			Err:  errors.Wrapf(err, "cannot unmarshal %s into %T", node.ShortTag(), c),
 		}
 	}
-	if err := validateConst(raw); err != nil {
-		return &yaml.UnmarshalError{
-			Node: node,
-			Err:  err,
-		}
-	}
 	*c = Const(raw)
 	return nil
 }
@@ -48,28 +42,6 @@ func (c *Const) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	if err := validateConst(raw); err != nil {
-		return err
-	}
 	*c = Const(raw)
-	return nil
-}
-
-// validateConst rejects empty objects.
-func validateConst(raw []byte) error {
-	d := jx.DecodeBytes(raw)
-	if d.Next() != jx.Object {
-		return nil
-	}
-	empty := true
-	if err := d.Obj(func(d *jx.Decoder, key string) error {
-		empty = false
-		return d.Skip()
-	}); err != nil {
-		return err
-	}
-	if empty {
-		return errors.New("const cannot be an empty object")
-	}
 	return nil
 }

@@ -219,6 +219,56 @@ func TestValidateUniqueComprehensiveItem_OptionalFieldDifferences(t *testing.T) 
 	}
 }
 
+// Test that an explicit null nullable field differs from an empty string value
+func TestValidateUniqueComprehensiveItem_NullableFieldDifferences(t *testing.T) {
+	var nullExternalId OptNilString
+	nullExternalId.SetToNull()
+
+	itemWithNull := ComprehensiveItem{
+		ID:         "item-1",
+		Name:       "Base Item",
+		Priority:   1,
+		Active:     true,
+		ExternalId: nullExternalId,
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	itemWithEmpty := ComprehensiveItem{
+		ID:         "item-1",
+		Name:       "Base Item",
+		Priority:   1,
+		Active:     true,
+		ExternalId: NewOptNilString(""),
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	items := []ComprehensiveItem{itemWithNull, itemWithEmpty}
+
+	err := validateUniqueComprehensiveItem(items)
+	if err != nil {
+		t.Errorf("Expected no error for null vs empty string nullable field, got: %v", err)
+	}
+
+	var secondNullExternalId OptNilString
+	secondNullExternalId.SetToNull()
+	duplicateOfNull := itemWithNull
+	duplicateOfNull.ExternalId = secondNullExternalId
+
+	duplicates := []ComprehensiveItem{itemWithNull, duplicateOfNull}
+
+	err = validateUniqueComprehensiveItem(duplicates)
+	if err == nil {
+		t.Error("Expected duplicate error for two items with null nullable fields")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+}
+
 // Test that items differing only in nested objects are detected as different
 func TestValidateUniqueComprehensiveItem_NestedObjectDifferences(t *testing.T) {
 	item1 := ComprehensiveItem{

@@ -6,36 +6,32 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// validateUniqueComprehensiveItem checks for duplicate items in a slice using hash-based detection.
+// validateUniqueComprehensiveItem checks for duplicate items using hash-based detection.
 func validateUniqueComprehensiveItem(items []ComprehensiveItem) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
 
-	// Recover from depth limit panics during Equal() calls
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(*validate.DepthLimitError); ok {
 				err = e
 			} else {
-				panic(r) // Re-panic if not a depth limit error
+				panic(r)
 			}
 		}
 	}()
 
-	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
 		item  ComprehensiveItem
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
 
-	// Check each item for duplicates
 	for i, item := range items {
 		hash := item.Hash()
 		bucket := buckets[hash]
 
-		// Check for duplicates in this hash bucket
 		for _, existing := range bucket {
 			if item.Equal(existing.item, 0) {
 				return &validate.DuplicateItemsError{
@@ -44,43 +40,38 @@ func validateUniqueComprehensiveItem(items []ComprehensiveItem) (err error) {
 			}
 		}
 
-		// No duplicate found, add to bucket
 		buckets[hash] = append(bucket, entry{item: item, index: i})
 	}
 
 	return nil
 }
 
-// validateUniqueUser checks for duplicate items in a slice using hash-based detection.
+// validateUniqueUser checks for duplicate items using hash-based detection.
 func validateUniqueUser(items []User) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
 
-	// Recover from depth limit panics during Equal() calls
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(*validate.DepthLimitError); ok {
 				err = e
 			} else {
-				panic(r) // Re-panic if not a depth limit error
+				panic(r)
 			}
 		}
 	}()
 
-	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
 		item  User
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
 
-	// Check each item for duplicates
 	for i, item := range items {
 		hash := item.Hash()
 		bucket := buckets[hash]
 
-		// Check for duplicates in this hash bucket
 		for _, existing := range bucket {
 			if item.Equal(existing.item, 0) {
 				return &validate.DuplicateItemsError{
@@ -89,43 +80,38 @@ func validateUniqueUser(items []User) (err error) {
 			}
 		}
 
-		// No duplicate found, add to bucket
 		buckets[hash] = append(bucket, entry{item: item, index: i})
 	}
 
 	return nil
 }
 
-// validateUniqueConfiguration checks for duplicate items in a slice using hash-based detection.
+// validateUniqueConfiguration checks for duplicate items using hash-based detection.
 func validateUniqueConfiguration(items []Configuration) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
 
-	// Recover from depth limit panics during Equal() calls
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(*validate.DepthLimitError); ok {
 				err = e
 			} else {
-				panic(r) // Re-panic if not a depth limit error
+				panic(r)
 			}
 		}
 	}()
 
-	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
 		item  Configuration
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
 
-	// Check each item for duplicates
 	for i, item := range items {
 		hash := item.Hash()
 		bucket := buckets[hash]
 
-		// Check for duplicates in this hash bucket
 		for _, existing := range bucket {
 			if item.Equal(existing.item, 0) {
 				return &validate.DuplicateItemsError{
@@ -134,43 +120,38 @@ func validateUniqueConfiguration(items []Configuration) (err error) {
 			}
 		}
 
-		// No duplicate found, add to bucket
 		buckets[hash] = append(bucket, entry{item: item, index: i})
 	}
 
 	return nil
 }
 
-// validateUniqueFeature checks for duplicate items in a slice using hash-based detection.
+// validateUniqueFeature checks for duplicate items using hash-based detection.
 func validateUniqueFeature(items []Feature) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
 
-	// Recover from depth limit panics during Equal() calls
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(*validate.DepthLimitError); ok {
 				err = e
 			} else {
-				panic(r) // Re-panic if not a depth limit error
+				panic(r)
 			}
 		}
 	}()
 
-	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
 		item  Feature
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
 
-	// Check each item for duplicates
 	for i, item := range items {
 		hash := item.Hash()
 		bucket := buckets[hash]
 
-		// Check for duplicates in this hash bucket
 		for _, existing := range bucket {
 			if item.Equal(existing.item, 0) {
 				return &validate.DuplicateItemsError{
@@ -179,7 +160,6 @@ func validateUniqueFeature(items []Feature) (err error) {
 			}
 		}
 
-		// No duplicate found, add to bucket
 		buckets[hash] = append(bucket, entry{item: item, index: i})
 	}
 

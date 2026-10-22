@@ -6,36 +6,32 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// validateUniqueGoldenItem checks for duplicate items in a slice using hash-based detection.
+// validateUniqueGoldenItem checks for duplicate items using hash-based detection.
 func validateUniqueGoldenItem(items []GoldenItem) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
 
-	// Recover from depth limit panics during Equal() calls
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(*validate.DepthLimitError); ok {
 				err = e
 			} else {
-				panic(r) // Re-panic if not a depth limit error
+				panic(r)
 			}
 		}
 	}()
 
-	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
 		item  GoldenItem
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
 
-	// Check each item for duplicates
 	for i, item := range items {
 		hash := item.Hash()
 		bucket := buckets[hash]
 
-		// Check for duplicates in this hash bucket
 		for _, existing := range bucket {
 			if item.Equal(existing.item, 0) {
 				return &validate.DuplicateItemsError{
@@ -44,43 +40,38 @@ func validateUniqueGoldenItem(items []GoldenItem) (err error) {
 			}
 		}
 
-		// No duplicate found, add to bucket
 		buckets[hash] = append(bucket, entry{item: item, index: i})
 	}
 
 	return nil
 }
 
-// validateUniqueMetadata checks for duplicate items in a slice using hash-based detection.
+// validateUniqueMetadata checks for duplicate items using hash-based detection.
 func validateUniqueMetadata(items []Metadata) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
 
-	// Recover from depth limit panics during Equal() calls
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(*validate.DepthLimitError); ok {
 				err = e
 			} else {
-				panic(r) // Re-panic if not a depth limit error
+				panic(r)
 			}
 		}
 	}()
 
-	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
 		item  Metadata
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
 
-	// Check each item for duplicates
 	for i, item := range items {
 		hash := item.Hash()
 		bucket := buckets[hash]
 
-		// Check for duplicates in this hash bucket
 		for _, existing := range bucket {
 			if item.Equal(existing.item, 0) {
 				return &validate.DuplicateItemsError{
@@ -89,7 +80,6 @@ func validateUniqueMetadata(items []Metadata) (err error) {
 			}
 		}
 
-		// No duplicate found, add to bucket
 		buckets[hash] = append(bucket, entry{item: item, index: i})
 	}
 

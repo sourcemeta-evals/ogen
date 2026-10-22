@@ -29,6 +29,10 @@ func (c *codeRecorder) WriteHeader(status int) {
 	c.ResponseWriter.WriteHeader(status)
 }
 
+func (c *codeRecorder) Unwrap() http.ResponseWriter {
+	return c.ResponseWriter
+}
+
 // handleUpdateWorkflowMappingRequest handles updateWorkflowMapping operation.
 //
 // Sets workflow mappings for a workflow scheme. Uses uniqueItems

@@ -135,12 +135,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Route is route object.
 type Route struct {
-	name        string
-	summary     string
-	operationID string
-	pathPattern string
-	count       int
-	args        [1]string
+	name           string
+	summary        string
+	operationID    string
+	operationGroup string
+	pathPattern    string
+	count          int
+	args           [1]string
 }
 
 // Name returns ogen operation name.
@@ -158,6 +159,11 @@ func (r Route) Summary() string {
 // OperationID returns OpenAPI operationId.
 func (r Route) OperationID() string {
 	return r.operationID
+}
+
+// OperationGroup returns the x-ogen-operation-group value.
+func (r Route) OperationGroup() string {
+	return r.operationGroup
 }
 
 // PathPattern returns OpenAPI path.
@@ -235,6 +241,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.name = UpdateWorkflowTransitionRulesOperation
 						r.summary = "Update workflow transition rules"
 						r.operationID = "updateWorkflowTransitionRules"
+						r.operationGroup = ""
 						r.pathPattern = "/workflow/transitions/rules"
 						r.args = args
 						r.count = 0
@@ -280,6 +287,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							r.name = UpdateWorkflowMappingOperation
 							r.summary = "Set workflow scheme mappings"
 							r.operationID = "updateWorkflowMapping"
+							r.operationGroup = ""
 							r.pathPattern = "/workflowscheme/{id}/workflow"
 							r.args = args
 							r.count = 1

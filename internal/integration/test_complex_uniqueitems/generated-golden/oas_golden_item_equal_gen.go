@@ -34,8 +34,13 @@ func (a GoldenItem) Equal(b GoldenItem, depth int) bool {
 		return false
 	}
 	if a.ExternalRef.Set {
-		if a.ExternalRef.Value != b.ExternalRef.Value {
+		if a.ExternalRef.Null != b.ExternalRef.Null {
 			return false
+		}
+		if !a.ExternalRef.Null {
+			if a.ExternalRef.Value != b.ExternalRef.Value {
+				return false
+			}
 		}
 	}
 	// Compare array field: Tags

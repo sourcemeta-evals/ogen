@@ -49,8 +49,13 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 		return false
 	}
 	if a.ExternalId.Set {
-		if a.ExternalId.Value != b.ExternalId.Value {
+		if a.ExternalId.Null != b.ExternalId.Null {
 			return false
+		}
+		if !a.ExternalId.Null {
+			if a.ExternalId.Value != b.ExternalId.Value {
+				return false
+			}
 		}
 	}
 	// Compare optional field: Status

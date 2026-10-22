@@ -6,81 +6,32 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// validateUniqueIssueTypesWorkflowMapping checks for duplicate items in a slice using hash-based detection.
-func validateUniqueIssueTypesWorkflowMapping(items []IssueTypesWorkflowMapping) (err error) {
-	if len(items) <= 1 {
-		return nil
-	}
-
-	// Recover from depth limit panics during Equal() calls
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(*validate.DepthLimitError); ok {
-				err = e
-			} else {
-				panic(r) // Re-panic if not a depth limit error
-			}
-		}
-	}()
-
-	// Hash bucket structure for O(n) duplicate detection
-	type entry struct {
-		item  IssueTypesWorkflowMapping
-		index int
-	}
-	buckets := make(map[uint64][]entry, len(items))
-
-	// Check each item for duplicates
-	for i, item := range items {
-		hash := item.Hash()
-		bucket := buckets[hash]
-
-		// Check for duplicates in this hash bucket
-		for _, existing := range bucket {
-			if item.Equal(existing.item, 0) {
-				return &validate.DuplicateItemsError{
-					Indices: []int{existing.index, i},
-				}
-			}
-		}
-
-		// No duplicate found, add to bucket
-		buckets[hash] = append(bucket, entry{item: item, index: i})
-	}
-
-	return nil
-}
-
-// validateUniqueWorkflowTransitionRule checks for duplicate items in a slice using hash-based detection.
+// validateUniqueWorkflowTransitionRule checks for duplicate items using hash-based detection.
 func validateUniqueWorkflowTransitionRule(items []WorkflowTransitionRule) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
 
-	// Recover from depth limit panics during Equal() calls
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(*validate.DepthLimitError); ok {
 				err = e
 			} else {
-				panic(r) // Re-panic if not a depth limit error
+				panic(r)
 			}
 		}
 	}()
 
-	// Hash bucket structure for O(n) duplicate detection
 	type entry struct {
 		item  WorkflowTransitionRule
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
 
-	// Check each item for duplicates
 	for i, item := range items {
 		hash := item.Hash()
 		bucket := buckets[hash]
 
-		// Check for duplicates in this hash bucket
 		for _, existing := range bucket {
 			if item.Equal(existing.item, 0) {
 				return &validate.DuplicateItemsError{
@@ -89,7 +40,46 @@ func validateUniqueWorkflowTransitionRule(items []WorkflowTransitionRule) (err e
 			}
 		}
 
-		// No duplicate found, add to bucket
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueIssueTypesWorkflowMapping checks for duplicate items using hash-based detection.
+func validateUniqueIssueTypesWorkflowMapping(items []IssueTypesWorkflowMapping) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  IssueTypesWorkflowMapping
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash()
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
 		buckets[hash] = append(bucket, entry{item: item, index: i})
 	}
 

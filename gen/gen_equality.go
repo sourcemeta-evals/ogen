@@ -107,7 +107,7 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsMap:
 			// Optional wrapper around map - need custom comparison
-			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), valueIndent)
+			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), valueIndent, field.IsMapOfStructs, hasDepth)
 		case field.IsArray:
 			// Optional wrapper around array - need iteration
 			aArray := fmt.Sprintf("a.%s.Value", field.FieldName)
@@ -149,7 +149,7 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsMap:
 			// Nullable wrapper around map - need custom comparison
-			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), "\t\t")
+			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), "\t\t", field.IsMapOfStructs, hasDepth)
 		case field.IsArray:
 			// Nullable wrapper around array - need iteration
 			aArray := fmt.Sprintf("a.%s.Value", field.FieldName)
@@ -176,7 +176,16 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		fmt.Fprintf(b, "\t\treturn false\n")
 		fmt.Fprintf(b, "\t}\n")
 		fmt.Fprintf(b, "\tif a.%s != nil {\n", field.FieldName)
-		fmt.Fprintf(b, "\t\tif *a.%s != *b.%s {\n", field.FieldName, field.FieldName)
+		if field.IsNested {
+			// Pointer to a nested object - compare via Equal() on the pointee
+			if hasDepth {
+				fmt.Fprintf(b, "\t\tif !a.%s.Equal(*b.%s, depth+1) {\n", field.FieldName, field.FieldName)
+			} else {
+				fmt.Fprintf(b, "\t\tif !a.%s.Equal(*b.%s) {\n", field.FieldName, field.FieldName)
+			}
+		} else {
+			fmt.Fprintf(b, "\t\tif *a.%s != *b.%s {\n", field.FieldName, field.FieldName)
+		}
 		fmt.Fprintf(b, "\t\t\treturn false\n")
 		fmt.Fprintf(b, "\t\t}\n")
 		fmt.Fprintf(b, "\t}\n")
@@ -231,15 +240,7 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 	case ir.FieldTypeMap:
 		// Map field comparison
 		fmt.Fprintf(b, "\t// Compare map field: %s\n", field.FieldName)
-		fmt.Fprintf(b, "\tif len(a.%s) != len(b.%s) {\n", field.FieldName, field.FieldName)
-		fmt.Fprintf(b, "\t\treturn false\n")
-		fmt.Fprintf(b, "\t}\n")
-		fmt.Fprintf(b, "\tfor k, v := range a.%s {\n", field.FieldName)
-		fmt.Fprintf(b, "\t\tbv, ok := b.%s[k]\n", field.FieldName)
-		fmt.Fprintf(b, "\t\tif !ok || v != bv {\n")
-		fmt.Fprintf(b, "\t\t\treturn false\n")
-		fmt.Fprintf(b, "\t\t}\n")
-		fmt.Fprintf(b, "\t}\n")
+		g.writeMapComparison(b, fmt.Sprintf("a.%s", field.FieldName), fmt.Sprintf("b.%s", field.FieldName), "\t", field.IsMapOfStructs, hasDepth)
 
 	case ir.FieldTypeNestedObject:
 		// Nested object comparison (recursive Equal() call)
@@ -409,14 +410,30 @@ func snakeCase(s string) string {
 }
 
 // writeMapComparison generates map comparison code
-func (g *Generator) writeMapComparison(b *strings.Builder, aMap, bMap, indent string) {
+func (g *Generator) writeMapComparison(b *strings.Builder, aMap, bMap, indent string, isMapOfStructs, hasDepth bool) {
 	fmt.Fprintf(b, "%sif len(%s) != len(%s) {\n", indent, aMap, bMap)
 	fmt.Fprintf(b, "%s\treturn false\n", indent)
 	fmt.Fprintf(b, "%s}\n", indent)
 	fmt.Fprintf(b, "%sfor k, v := range %s {\n", indent, aMap)
-	fmt.Fprintf(b, "%s\tif bv, ok := %s[k]; !ok || v != bv {\n", indent, bMap)
-	fmt.Fprintf(b, "%s\t\treturn false\n", indent)
-	fmt.Fprintf(b, "%s\t}\n", indent)
+	if isMapOfStructs {
+		// Struct values - recurse through Equal() for semantic comparison
+		fmt.Fprintf(b, "%s\tbv, ok := %s[k]\n", indent, bMap)
+		fmt.Fprintf(b, "%s\tif !ok {\n", indent)
+		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
+		fmt.Fprintf(b, "%s\t}\n", indent)
+		if hasDepth {
+			fmt.Fprintf(b, "%s\tif !v.Equal(bv, depth+1) {\n", indent)
+		} else {
+			fmt.Fprintf(b, "%s\tif !v.Equal(bv) {\n", indent)
+		}
+		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
+		fmt.Fprintf(b, "%s\t}\n", indent)
+	} else {
+		// Primitive values - direct comparison
+		fmt.Fprintf(b, "%s\tif bv, ok := %s[k]; !ok || v != bv {\n", indent, bMap)
+		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
+		fmt.Fprintf(b, "%s\t}\n", indent)
+	}
 	fmt.Fprintf(b, "%s}\n", indent)
 }
 

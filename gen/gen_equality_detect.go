@@ -120,6 +120,18 @@ func (g *Generator) collectNestedTypes(t *ir.Type, visited map[string]bool) {
 			g.collectNestedTypes(t.Item, visited)
 		}
 
+	case ir.KindMap:
+		// Maps might contain nested objects as values
+		if t.Item != nil {
+			g.collectNestedTypes(t.Item, visited)
+		}
+
+	case ir.KindPointer:
+		// Pointers might reference nested objects
+		if t.PointerTo != nil {
+			g.collectNestedTypes(t.PointerTo, visited)
+		}
+
 	case ir.KindAlias:
 		if t.AliasTo != nil {
 			g.collectNestedTypes(t.AliasTo, visited)
@@ -206,6 +218,19 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				isArray = true
 			}
 
+			// Check if this is a map of structs (either direct or wrapped in Optional/Nullable)
+			isMapOfStructs := false
+			mapType := field.Type
+			if mapType.Kind != ir.KindMap && unwrapped != nil && unwrapped.Kind == ir.KindMap {
+				mapType = unwrapped
+			}
+			if mapType.Kind == ir.KindMap && mapType.Item != nil {
+				valueType := unwrapOptional(mapType.Item)
+				if valueType != nil && valueType.Kind == ir.KindStruct {
+					isMapOfStructs = true
+				}
+			}
+
 			// Check if this is an array of structs or nullable wrappers (either direct or wrapped)
 			isArrayOfNullable := false
 			arrayType := field.Type
@@ -253,6 +278,7 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				GoType:             goType,
 				IsNested:           isNestedObject(field.Type),
 				IsMap:              isMap,
+				IsMapOfStructs:     isMapOfStructs,
 				IsArray:            isArray,
 				IsArrayOfStructs:   isArrayOfStructs,
 				IsArrayOfNullable:  isArrayOfNullable,
@@ -329,6 +355,12 @@ func isNestedObject(t *ir.Type) bool {
 		}
 		// Regular struct - it's a nested object
 		return true
+	case ir.KindPointer:
+		// Pointer to a nested object - compare via Equal() on the pointee
+		if t.PointerTo != nil {
+			return isNestedObject(t.PointerTo)
+		}
+		return false
 	case ir.KindAlias:
 		if t.AliasTo != nil {
 			return isNestedObject(t.AliasTo)

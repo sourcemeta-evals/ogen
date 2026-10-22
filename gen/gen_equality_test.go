@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ogen-go/ogen/gen/ir"
+	"github.com/ogen-go/ogen/jsonschema"
 )
 
 func TestCreateEqualityMethodSpec_ArrayDetection(t *testing.T) {
@@ -483,6 +484,238 @@ func TestWriteFieldComparison_NullableArray(t *testing.T) {
 			g := &Generator{}
 
 			g.writeFieldComparison(&b, tt.field, tt.hasDepth)
+
+			output := b.String()
+			for _, expected := range tt.expectedContains {
+				require.Contains(t, output, expected,
+					"output should contain: %s", expected)
+			}
+			for _, notExpected := range tt.notContains {
+				require.NotContains(t, output, notExpected,
+					"output should NOT contain: %s", notExpected)
+			}
+		})
+	}
+}
+
+func TestNeedsEqualityMethod(t *testing.T) {
+	tests := []struct {
+		name     string
+		irType   *ir.Type
+		expected bool
+	}{
+		{
+			name:     "nil type",
+			irType:   nil,
+			expected: false,
+		},
+		{
+			name:     "struct needs equality",
+			irType:   &ir.Type{Kind: ir.KindStruct, Name: "WorkflowStatus"},
+			expected: true,
+		},
+		{
+			name: "array needs equality",
+			irType: &ir.Type{
+				Kind: ir.KindArray,
+				Item: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String},
+			},
+			expected: true,
+		},
+		{
+			name: "map needs equality",
+			irType: &ir.Type{
+				Kind: ir.KindMap,
+				Name: "Attributes",
+				Item: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String},
+			},
+			expected: true,
+		},
+		{
+			name:     "primitive does not need equality",
+			irType:   &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String},
+			expected: false,
+		},
+		{
+			name: "alias to struct needs equality",
+			irType: &ir.Type{
+				Kind:    ir.KindAlias,
+				Name:    "StatusAlias",
+				AliasTo: &ir.Type{Kind: ir.KindStruct, Name: "WorkflowStatus"},
+			},
+			expected: true,
+		},
+		{
+			name: "alias to primitive does not need equality",
+			irType: &ir.Type{
+				Kind:    ir.KindAlias,
+				Name:    "IDAlias",
+				AliasTo: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String},
+			},
+			expected: false,
+		},
+		{
+			name:     "alias without target does not need equality",
+			irType:   &ir.Type{Kind: ir.KindAlias, Name: "Dangling"},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, needsEqualityMethod(tt.irType))
+		})
+	}
+}
+
+func TestCollectEqualitySpecs(t *testing.T) {
+	properties := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "StatusProperties",
+		Fields: []*ir.Field{
+			{Name: "Key", Type: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}},
+		},
+	}
+	attributeValue := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "AttributeValue",
+		Fields: []*ir.Field{
+			{Name: "Raw", Type: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}},
+		},
+	}
+	workflowStatus := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "WorkflowStatus",
+		Fields: []*ir.Field{
+			{Name: "ID", Type: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}},
+			{Name: "Properties", Type: properties},
+			{Name: "Attributes", Type: &ir.Type{
+				Kind: ir.KindMap,
+				Name: "WorkflowStatusAttributes",
+				Item: attributeValue,
+			}},
+		},
+	}
+	uniqueStructArray := &ir.Type{
+		Kind:   ir.KindArray,
+		Item:   workflowStatus,
+		Schema: &jsonschema.Schema{UniqueItems: true},
+	}
+	plainStatus := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "PlainStatus",
+		Fields: []*ir.Field{
+			{Name: "ID", Type: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}},
+		},
+	}
+	nonUniqueStructArray := &ir.Type{
+		Kind:   ir.KindArray,
+		Item:   plainStatus,
+		Schema: &jsonschema.Schema{UniqueItems: false},
+	}
+	uniquePrimitiveArray := &ir.Type{
+		Kind:   ir.KindArray,
+		Item:   &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String},
+		Schema: &jsonschema.Schema{UniqueItems: true},
+	}
+	request := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "Request",
+		Fields: []*ir.Field{
+			{Name: "Statuses", Type: uniqueStructArray},
+			{Name: "MoreStatuses", Type: uniqueStructArray},
+			{Name: "History", Type: nonUniqueStructArray},
+			{Name: "Tags", Type: uniquePrimitiveArray},
+		},
+	}
+
+	g := &Generator{
+		tstorage:      newTStorage(),
+		equalitySpecs: []*ir.EqualityMethodSpec{},
+	}
+	g.tstorage.types["Request"] = request
+
+	g.collectEqualitySpecs()
+
+	collected := map[string]*ir.EqualityMethodSpec{}
+	for _, spec := range g.equalitySpecs {
+		require.NotContains(t, collected, spec.TypeName,
+			"type %s should only be collected once", spec.TypeName)
+		collected[spec.TypeName] = spec
+	}
+
+	// The uniqueItems array item and every struct reachable from it need methods
+	require.Contains(t, collected, "WorkflowStatus")
+	require.Contains(t, collected, "StatusProperties")
+	require.Contains(t, collected, "AttributeValue",
+		"struct map values should be collected through KindMap traversal")
+
+	// Non-unique arrays and uniqueItems arrays of primitives need no methods
+	require.NotContains(t, collected, "PlainStatus")
+	require.NotContains(t, collected, "Request")
+	require.Len(t, collected, 3)
+
+	// The map of structs must be flagged for recursive comparison
+	var attributesField *ir.FieldEqualitySpec
+	for i := range collected["WorkflowStatus"].Fields {
+		if collected["WorkflowStatus"].Fields[i].FieldName == "Attributes" {
+			attributesField = &collected["WorkflowStatus"].Fields[i]
+			break
+		}
+	}
+	require.NotNil(t, attributesField)
+	require.Equal(t, ir.FieldTypeMap, attributesField.FieldType)
+	require.True(t, attributesField.IsMapOfStructs)
+}
+
+func TestWriteMapComparison(t *testing.T) {
+	tests := []struct {
+		name             string
+		isMapOfStructs   bool
+		hasDepth         bool
+		expectedContains []string
+		notContains      []string
+	}{
+		{
+			name:           "primitive values",
+			isMapOfStructs: false,
+			hasDepth:       true,
+			expectedContains: []string{
+				"if len(a.Attrs) != len(b.Attrs)",
+				"for k, v := range a.Attrs",
+				"if bv, ok := b.Attrs[k]; !ok || v != bv",
+			},
+			notContains: []string{".Equal("},
+		},
+		{
+			name:           "struct values with depth",
+			isMapOfStructs: true,
+			hasDepth:       true,
+			expectedContains: []string{
+				"if len(a.Attrs) != len(b.Attrs)",
+				"for k, v := range a.Attrs",
+				"bv, ok := b.Attrs[k]",
+				"if !v.Equal(bv, depth+1)",
+			},
+			notContains: []string{"v != bv"},
+		},
+		{
+			name:           "struct values without depth",
+			isMapOfStructs: true,
+			hasDepth:       false,
+			expectedContains: []string{
+				"if !v.Equal(bv)",
+			},
+			notContains: []string{"v != bv", "depth+1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b strings.Builder
+			g := &Generator{}
+
+			g.writeMapComparison(&b, "a.Attrs", "b.Attrs", "\t", tt.isMapOfStructs, tt.hasDepth)
 
 			output := b.String()
 			for _, expected := range tt.expectedContains {

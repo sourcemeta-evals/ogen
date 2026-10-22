@@ -45,3 +45,12 @@ package integration
 //go:generate go run ../../cmd/ogen -v --clean --target test_issue1161 ../../_testdata/positive/issue1161.json
 //go:generate go run ../../cmd/ogen -v --clean --target test_issue1495 ../../_testdata/positive/issue1495.yml
 //go:generate go run ../../cmd/ogen -v --clean --target test_raw_response ../../_testdata/positive/raw_response.yml
+//
+// Complex uniqueItems validation (issue #1563).
+//
+//go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated             ../../_testdata/examples/complex-uniqueitems/workflow-status.yaml
+//go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-deep        ../../_testdata/examples/complex-uniqueitems/workflow-deep.yaml
+//go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-depth-limit ../../_testdata/examples/complex-uniqueitems/depth-limit-test.yaml
+//go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-golden      ../../_testdata/examples/complex-uniqueitems/golden-test.yaml
+//go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-integration ../../_testdata/examples/complex-uniqueitems/all-field-types.yaml
+//go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-jira        ../../_testdata/examples/complex-uniqueitems/jira-subset.yaml

@@ -46,6 +46,11 @@ type FieldEqualitySpec struct {
 	// IsArrayOfNullable indicates if this is an array field where elements are nullable wrappers (NilT)
 	IsArrayOfNullable bool
 
+	// IsNilSemanticArray indicates a direct array field where nil carries
+	// meaning (absent property or JSON null), so nil and empty must compare
+	// as different values
+	IsNilSemanticArray bool
+
 	// IsByteSlice indicates if this field is a byte slice ([]byte / jx.Raw)
 	IsByteSlice bool
 
@@ -93,4 +98,13 @@ type FieldHashSpec struct {
 
 	// IsNested indicates if this field has a Hash() method
 	IsNested bool
+
+	// IsArrayOfStructs indicates array elements provide their own Hash() method
+	IsArrayOfStructs bool
+
+	// IsArrayOfNullable indicates array elements are nullable wrappers (NilT)
+	IsArrayOfNullable bool
+
+	// IsMapOfStructs indicates map values provide their own Hash() method
+	IsMapOfStructs bool
 }

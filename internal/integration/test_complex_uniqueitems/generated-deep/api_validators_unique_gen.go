@@ -6,8 +6,8 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// validateUniqueWorkflowTransition checks for duplicate items using hash-based detection.
-func validateUniqueWorkflowTransition(items []WorkflowTransition) (err error) {
+// validateUniqueCondition checks for duplicate items using hash-based detection.
+func validateUniqueCondition(items []Condition) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -23,7 +23,7 @@ func validateUniqueWorkflowTransition(items []WorkflowTransition) (err error) {
 	}()
 
 	type entry struct {
-		item  WorkflowTransition
+		item  Condition
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
@@ -86,8 +86,8 @@ func validateUniqueConditionGroup(items []ConditionGroup) (err error) {
 	return nil
 }
 
-// validateUniqueCondition checks for duplicate items using hash-based detection.
-func validateUniqueCondition(items []Condition) (err error) {
+// validateUniqueParameter checks for duplicate items using hash-based detection.
+func validateUniqueParameter(items []Parameter) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -103,47 +103,7 @@ func validateUniqueCondition(items []Condition) (err error) {
 	}()
 
 	type entry struct {
-		item  Condition
-		index int
-	}
-	buckets := make(map[uint64][]entry, len(items))
-
-	for i, item := range items {
-		hash := item.Hash()
-		bucket := buckets[hash]
-
-		for _, existing := range bucket {
-			if item.Equal(existing.item, 0) {
-				return &validate.DuplicateItemsError{
-					Indices: []int{existing.index, i},
-				}
-			}
-		}
-
-		buckets[hash] = append(bucket, entry{item: item, index: i})
-	}
-
-	return nil
-}
-
-// validateUniqueRuleConfiguration checks for duplicate items using hash-based detection.
-func validateUniqueRuleConfiguration(items []RuleConfiguration) (err error) {
-	if len(items) <= 1 {
-		return nil
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(*validate.DepthLimitError); ok {
-				err = e
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
-	type entry struct {
-		item  RuleConfiguration
+		item  Parameter
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
@@ -206,8 +166,8 @@ func validateUniqueParameterGroup(items []ParameterGroup) (err error) {
 	return nil
 }
 
-// validateUniqueParameter checks for duplicate items using hash-based detection.
-func validateUniqueParameter(items []Parameter) (err error) {
+// validateUniqueParameterValue checks for duplicate items using hash-based detection.
+func validateUniqueParameterValue(items []ParameterValue) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -223,7 +183,7 @@ func validateUniqueParameter(items []Parameter) (err error) {
 	}()
 
 	type entry struct {
-		item  Parameter
+		item  ParameterValue
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
@@ -246,8 +206,8 @@ func validateUniqueParameter(items []Parameter) (err error) {
 	return nil
 }
 
-// validateUniqueParameterValue checks for duplicate items using hash-based detection.
-func validateUniqueParameterValue(items []ParameterValue) (err error) {
+// validateUniqueRuleConfiguration checks for duplicate items using hash-based detection.
+func validateUniqueRuleConfiguration(items []RuleConfiguration) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -263,7 +223,47 @@ func validateUniqueParameterValue(items []ParameterValue) (err error) {
 	}()
 
 	type entry struct {
-		item  ParameterValue
+		item  RuleConfiguration
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash()
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueWorkflowTransition checks for duplicate items using hash-based detection.
+func validateUniqueWorkflowTransition(items []WorkflowTransition) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  WorkflowTransition
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))

@@ -77,6 +77,9 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 		}
 	}
 	// Compare array field: Tags
+	if (a.Tags == nil) != (b.Tags == nil) {
+		return false
+	}
 	if len(a.Tags) != len(b.Tags) {
 		return false
 	}
@@ -86,6 +89,9 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 		}
 	}
 	// Compare array field: Labels
+	if (a.Labels == nil) != (b.Labels == nil) {
+		return false
+	}
 	if len(a.Labels) != len(b.Labels) {
 		return false
 	}
@@ -141,6 +147,9 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 		}
 	}
 	// Compare array field: Watchers
+	if (a.Watchers == nil) != (b.Watchers == nil) {
+		return false
+	}
 	if len(a.Watchers) != len(b.Watchers) {
 		return false
 	}

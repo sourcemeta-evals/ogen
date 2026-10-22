@@ -46,46 +46,6 @@ func validateUniqueComprehensiveItem(items []ComprehensiveItem) (err error) {
 	return nil
 }
 
-// validateUniqueUser checks for duplicate items using hash-based detection.
-func validateUniqueUser(items []User) (err error) {
-	if len(items) <= 1 {
-		return nil
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(*validate.DepthLimitError); ok {
-				err = e
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
-	type entry struct {
-		item  User
-		index int
-	}
-	buckets := make(map[uint64][]entry, len(items))
-
-	for i, item := range items {
-		hash := item.Hash()
-		bucket := buckets[hash]
-
-		for _, existing := range bucket {
-			if item.Equal(existing.item, 0) {
-				return &validate.DuplicateItemsError{
-					Indices: []int{existing.index, i},
-				}
-			}
-		}
-
-		buckets[hash] = append(bucket, entry{item: item, index: i})
-	}
-
-	return nil
-}
-
 // validateUniqueConfiguration checks for duplicate items using hash-based detection.
 func validateUniqueConfiguration(items []Configuration) (err error) {
 	if len(items) <= 1 {
@@ -144,6 +104,46 @@ func validateUniqueFeature(items []Feature) (err error) {
 
 	type entry struct {
 		item  Feature
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash()
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueUser checks for duplicate items using hash-based detection.
+func validateUniqueUser(items []User) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  User
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))

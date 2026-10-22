@@ -193,6 +193,12 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 	case ir.FieldTypeArray:
 		// Array field comparison
 		fmt.Fprintf(b, "\t// Compare array field: %s\n", field.FieldName)
+		if field.IsNilSemanticArray {
+			// nil encodes an absent or null property, which differs from []
+			fmt.Fprintf(b, "\tif (a.%s == nil) != (b.%s == nil) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\treturn false\n")
+			fmt.Fprintf(b, "\t}\n")
+		}
 		fmt.Fprintf(b, "\tif len(a.%s) != len(b.%s) {\n", field.FieldName, field.FieldName)
 		fmt.Fprintf(b, "\t\treturn false\n")
 		fmt.Fprintf(b, "\t}\n")
@@ -283,10 +289,13 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 	for _, field := range spec.Fields {
 		// Convert FieldEqualitySpec to FieldHashSpec
 		hashField := ir.FieldHashSpec{
-			FieldName: field.FieldName,
-			FieldType: field.FieldType,
-			GoType:    field.GoType,
-			IsNested:  field.IsNested,
+			FieldName:         field.FieldName,
+			FieldType:         field.FieldType,
+			GoType:            field.GoType,
+			IsNested:          field.IsNested,
+			IsArrayOfStructs:  field.IsArrayOfStructs,
+			IsArrayOfNullable: field.IsArrayOfNullable,
+			IsMapOfStructs:    field.IsMapOfStructs,
 		}
 		g.writeFieldHash(&b, hashField)
 	}
@@ -299,13 +308,43 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 	return writeFormattedCode(fs, filename, []byte(b.String()))
 }
 
+// isFloatGoType reports whether a Go type formats negative zero differently
+// from positive zero under %v, breaking hash and equality coherence
+func isFloatGoType(goType string) bool {
+	return goType == "float32" || goType == "float64"
+}
+
+// elemGoType returns the element type of a slice Go type
+func elemGoType(goType string) string {
+	return strings.TrimPrefix(goType, "[]")
+}
+
+// nullableWrapsFloat reports whether a NilT wrapper element holds a float value
+func nullableWrapsFloat(elemType string) bool {
+	return elemType == "NilFloat32" || elemType == "NilFloat64"
+}
+
+// writeFloatHash emits a hash write that normalizes negative zero so values
+// the Equal() comparison treats as equal produce equal hashes
+func writeFloatHash(b *strings.Builder, indent, name, expr string) {
+	fmt.Fprintf(b, "%s%s := %s\n", indent, name, expr)
+	fmt.Fprintf(b, "%sif %s == 0 {\n", indent, name)
+	fmt.Fprintf(b, "%s\t%s = 0\n", indent, name)
+	fmt.Fprintf(b, "%s}\n", indent)
+	fmt.Fprintf(b, "%sh.Write([]byte(fmt.Sprintf(\"%%v\", %s)))\n", indent, name)
+}
+
 // writeFieldHash generates hashing code for a single field
 func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 	switch field.FieldType {
 	case ir.FieldTypePrimitive:
 		// Hash primitive field
 		fmt.Fprintf(b, "\t// Hash primitive field: %s\n", field.FieldName)
-		fmt.Fprintf(b, "\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s)))\n", field.FieldName)
+		if isFloatGoType(field.GoType) {
+			writeFloatHash(b, "\t", "v"+field.FieldName, "a."+field.FieldName)
+		} else {
+			fmt.Fprintf(b, "\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s)))\n", field.FieldName)
+		}
 
 	case ir.FieldTypeOptional:
 		// Hash optional field (presence + value)
@@ -316,6 +355,8 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 			// Optional wrapper around nested object - call Hash()
 			fmt.Fprintf(b, "\t\tnestedHash%s := a.%s.Value.Hash()\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
+		} else if isFloatGoType(field.GoType) {
+			writeFloatHash(b, "\t\t", "v"+field.FieldName, "a."+field.FieldName+".Value")
 		} else {
 			// Optional wrapper around primitive - format value
 			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s.Value)))\n", field.FieldName)
@@ -335,6 +376,8 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 			// Nullable wrapper around nested object - call Hash()
 			fmt.Fprintf(b, "\t\tnestedHash%s := a.%s.Value.Hash()\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
+		} else if isFloatGoType(field.GoType) {
+			writeFloatHash(b, "\t\t", "v"+field.FieldName, "a."+field.FieldName+".Value")
 		} else {
 			// Nullable wrapper around primitive - format value
 			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s.Value)))\n", field.FieldName)
@@ -346,7 +389,15 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		fmt.Fprintf(b, "\t// Hash pointer field: %s\n", field.FieldName)
 		fmt.Fprintf(b, "\tif a.%s != nil {\n", field.FieldName)
 		fmt.Fprintf(b, "\t\th.Write([]byte{1})\n")
-		fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", *a.%s)))\n", field.FieldName)
+		if field.IsNested {
+			// Pointer to a nested object - call Hash()
+			fmt.Fprintf(b, "\t\tnestedHash%s := a.%s.Hash()\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
+		} else if isFloatGoType(field.GoType) {
+			writeFloatHash(b, "\t\t", "v"+field.FieldName, "*a."+field.FieldName)
+		} else {
+			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", *a.%s)))\n", field.FieldName)
+		}
 		fmt.Fprintf(b, "\t} else {\n")
 		fmt.Fprintf(b, "\t\th.Write([]byte{0})\n")
 		fmt.Fprintf(b, "\t}\n")
@@ -355,7 +406,30 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		// Hash array field
 		fmt.Fprintf(b, "\t// Hash array field: %s\n", field.FieldName)
 		fmt.Fprintf(b, "\tfor _, item := range a.%s {\n", field.FieldName)
-		fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", item)))\n")
+		switch {
+		case field.IsArrayOfNullable:
+			// Hash the null state, then only the active value, so inactive
+			// wrapper payloads cannot split equal items into different buckets
+			fmt.Fprintf(b, "\t\tif item.Null {\n")
+			fmt.Fprintf(b, "\t\t\th.Write([]byte{0})\n")
+			fmt.Fprintf(b, "\t\t} else {\n")
+			fmt.Fprintf(b, "\t\t\th.Write([]byte{1})\n")
+			if field.IsArrayOfStructs {
+				fmt.Fprintf(b, "\t\t\tbinary.Write(h, binary.LittleEndian, item.Value.Hash())\n")
+			} else if nullableWrapsFloat(elemGoType(field.GoType)) {
+				writeFloatHash(b, "\t\t\t", "v", "item.Value")
+			} else {
+				fmt.Fprintf(b, "\t\t\th.Write([]byte(fmt.Sprintf(\"%%v\", item.Value)))\n")
+			}
+			fmt.Fprintf(b, "\t\t}\n")
+		case field.IsArrayOfStructs:
+			// Struct elements provide their own equality-consistent Hash()
+			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, item.Hash())\n")
+		case isFloatGoType(elemGoType(field.GoType)):
+			writeFloatHash(b, "\t\t", "v", "item")
+		default:
+			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", item)))\n")
+		}
 		fmt.Fprintf(b, "\t}\n")
 
 	case ir.FieldTypeMap:
@@ -368,7 +442,12 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		fmt.Fprintf(b, "\tsort.Strings(keys%s)\n", field.FieldName)
 		fmt.Fprintf(b, "\tfor _, k := range keys%s {\n", field.FieldName)
 		fmt.Fprintf(b, "\t\th.Write([]byte(k))\n")
-		fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s[k])))\n", field.FieldName)
+		if field.IsMapOfStructs {
+			// Struct values provide their own equality-consistent Hash()
+			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, a.%s[k].Hash())\n", field.FieldName)
+		} else {
+			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s[k])))\n", field.FieldName)
+		}
 		fmt.Fprintf(b, "\t}\n")
 
 	case ir.FieldTypeNestedObject:

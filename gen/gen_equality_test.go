@@ -729,3 +729,110 @@ func TestWriteMapComparison(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteFieldHash(t *testing.T) {
+	tests := []struct {
+		name             string
+		field            ir.FieldHashSpec
+		expectedContains []string
+		notContains      []string
+	}{
+		{
+			name: "float primitive normalizes negative zero",
+			field: ir.FieldHashSpec{
+				FieldName: "Score",
+				FieldType: ir.FieldTypePrimitive,
+				GoType:    "float64",
+			},
+			expectedContains: []string{
+				"vScore := a.Score",
+				"if vScore == 0",
+				"fmt.Sprintf(\"%v\", vScore)",
+			},
+		},
+		{
+			name: "optional float normalizes negative zero",
+			field: ir.FieldHashSpec{
+				FieldName: "Score",
+				FieldType: ir.FieldTypeOptional,
+				GoType:    "float64",
+			},
+			expectedContains: []string{
+				"if a.Score.Set",
+				"vScore := a.Score.Value",
+				"if vScore == 0",
+			},
+		},
+		{
+			name: "string primitive hashes directly",
+			field: ir.FieldHashSpec{
+				FieldName: "Name",
+				FieldType: ir.FieldTypePrimitive,
+				GoType:    "string",
+			},
+			expectedContains: []string{
+				"fmt.Sprintf(\"%v\", a.Name)",
+			},
+			notContains: []string{"vName"},
+		},
+		{
+			name: "struct array elements hash through their Hash method",
+			field: ir.FieldHashSpec{
+				FieldName:        "Watchers",
+				FieldType:        ir.FieldTypeArray,
+				GoType:           "[]User",
+				IsArrayOfStructs: true,
+			},
+			expectedContains: []string{
+				"for _, item := range a.Watchers",
+				"binary.Write(h, binary.LittleEndian, item.Hash())",
+			},
+			notContains: []string{"fmt.Sprintf"},
+		},
+		{
+			name: "nullable array elements hash null state and active value",
+			field: ir.FieldHashSpec{
+				FieldName:         "Values",
+				FieldType:         ir.FieldTypeArray,
+				GoType:            "[]NilString",
+				IsArrayOfNullable: true,
+			},
+			expectedContains: []string{
+				"if item.Null",
+				"fmt.Sprintf(\"%v\", item.Value)",
+			},
+		},
+		{
+			name: "struct map values hash through their Hash method",
+			field: ir.FieldHashSpec{
+				FieldName:      "Attrs",
+				FieldType:      ir.FieldTypeMap,
+				GoType:         "AttrsMap",
+				IsMapOfStructs: true,
+			},
+			expectedContains: []string{
+				"sort.Strings(keysAttrs)",
+				"binary.Write(h, binary.LittleEndian, a.Attrs[k].Hash())",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b strings.Builder
+			g := &Generator{}
+
+			g.writeFieldHash(&b, tt.field)
+
+			output := b.String()
+			for _, expected := range tt.expectedContains {
+				require.Contains(t, output, expected,
+					"output should contain: %s", expected)
+			}
+			for _, notExpected := range tt.notContains {
+				require.NotContains(t, output, notExpected,
+					"output should NOT contain: %s", notExpected)
+			}
+		})
+	}
+}

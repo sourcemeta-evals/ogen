@@ -197,3 +197,93 @@ func TestGenerate(t *testing.T) {
 		})
 	}
 }
+
+func TestSchemaGenUniqueItemsGate(t *testing.T) {
+	objectWithProperties := &jsonschema.Schema{
+		Type: jsonschema.Object,
+		Properties: []jsonschema.Property{
+			{
+				Name:   "id",
+				Schema: &jsonschema.Schema{Type: jsonschema.String},
+			},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		item           *jsonschema.Schema
+		notImplemented bool
+	}{
+		{
+			name:           "string items are supported",
+			item:           &jsonschema.Schema{Type: jsonschema.String},
+			notImplemented: false,
+		},
+		{
+			name:           "object items with properties are supported",
+			item:           objectWithProperties,
+			notImplemented: false,
+		},
+		{
+			name:           "missing item type is not implemented",
+			item:           &jsonschema.Schema{Type: ""},
+			notImplemented: true,
+		},
+		{
+			name: "array items are not implemented",
+			item: &jsonschema.Schema{
+				Type: jsonschema.Array,
+				Item: &jsonschema.Schema{Type: jsonschema.String},
+			},
+			notImplemented: true,
+		},
+		{
+			name: "object items without properties compile to maps",
+			item: func() *jsonschema.Schema {
+				additional := true
+				return &jsonschema.Schema{
+					Type:                 jsonschema.Object,
+					AdditionalProperties: &additional,
+					Item:                 &jsonschema.Schema{Type: jsonschema.String},
+				}
+			}(),
+			notImplemented: true,
+		},
+		{
+			name: "nullable object items are not implemented",
+			item: &jsonschema.Schema{
+				Type:     jsonschema.Object,
+				Nullable: true,
+				Properties: []jsonschema.Property{
+					{
+						Name:   "id",
+						Schema: &jsonschema.Schema{Type: jsonschema.String},
+					},
+				},
+			},
+			notImplemented: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := require.New(t)
+			s := newSchemaGen(func(ref jsonschema.Ref) (*ir.Type, bool) {
+				return nil, false
+			})
+
+			_, err := s.generate("Thing", &jsonschema.Schema{
+				Type:        jsonschema.Array,
+				Item:        tt.item,
+				UniqueItems: true,
+			}, false)
+
+			if tt.notImplemented {
+				var notImplemented *ErrNotImplemented
+				a.ErrorAs(err, &notImplemented)
+			} else {
+				a.NoError(err)
+			}
+		})
+	}
+}

@@ -6,8 +6,8 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// validateUniqueWorkflowStatus checks for duplicate items using hash-based detection.
-func validateUniqueWorkflowStatus(items []WorkflowStatus) (err error) {
+// validateUniqueStatusProperties checks for duplicate items using hash-based detection.
+func validateUniqueStatusProperties(items []StatusProperties) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -23,7 +23,7 @@ func validateUniqueWorkflowStatus(items []WorkflowStatus) (err error) {
 	}()
 
 	type entry struct {
-		item  WorkflowStatus
+		item  StatusProperties
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
@@ -46,8 +46,8 @@ func validateUniqueWorkflowStatus(items []WorkflowStatus) (err error) {
 	return nil
 }
 
-// validateUniqueStatusProperties checks for duplicate items using hash-based detection.
-func validateUniqueStatusProperties(items []StatusProperties) (err error) {
+// validateUniqueWorkflowStatus checks for duplicate items using hash-based detection.
+func validateUniqueWorkflowStatus(items []WorkflowStatus) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -63,7 +63,7 @@ func validateUniqueStatusProperties(items []StatusProperties) (err error) {
 	}()
 
 	type entry struct {
-		item  StatusProperties
+		item  WorkflowStatus
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))

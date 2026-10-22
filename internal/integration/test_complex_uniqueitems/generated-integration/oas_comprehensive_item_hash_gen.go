@@ -31,7 +31,11 @@ func (a ComprehensiveItem) Hash() uint64 {
 	// Hash optional field: Score
 	if a.Score.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.Score.Value)))
+		vScore := a.Score.Value
+		if vScore == 0 {
+			vScore = 0
+		}
+		h.Write([]byte(fmt.Sprintf("%v", vScore)))
 	} else {
 		h.Write([]byte{0})
 	}
@@ -96,7 +100,7 @@ func (a ComprehensiveItem) Hash() uint64 {
 	}
 	// Hash array field: Watchers
 	for _, item := range a.Watchers {
-		h.Write([]byte(fmt.Sprintf("%v", item)))
+		binary.Write(h, binary.LittleEndian, item.Hash())
 	}
 	// Hash optional field: Configuration
 	if a.Configuration.Set {

@@ -6,8 +6,8 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// validateUniqueWorkflowTransitionRule checks for duplicate items using hash-based detection.
-func validateUniqueWorkflowTransitionRule(items []WorkflowTransitionRule) (err error) {
+// validateUniqueIssueTypesWorkflowMapping checks for duplicate items using hash-based detection.
+func validateUniqueIssueTypesWorkflowMapping(items []IssueTypesWorkflowMapping) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -23,7 +23,7 @@ func validateUniqueWorkflowTransitionRule(items []WorkflowTransitionRule) (err e
 	}()
 
 	type entry struct {
-		item  WorkflowTransitionRule
+		item  IssueTypesWorkflowMapping
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))
@@ -46,8 +46,8 @@ func validateUniqueWorkflowTransitionRule(items []WorkflowTransitionRule) (err e
 	return nil
 }
 
-// validateUniqueIssueTypesWorkflowMapping checks for duplicate items using hash-based detection.
-func validateUniqueIssueTypesWorkflowMapping(items []IssueTypesWorkflowMapping) (err error) {
+// validateUniqueWorkflowTransitionRule checks for duplicate items using hash-based detection.
+func validateUniqueWorkflowTransitionRule(items []WorkflowTransitionRule) (err error) {
 	if len(items) <= 1 {
 		return nil
 	}
@@ -63,7 +63,7 @@ func validateUniqueIssueTypesWorkflowMapping(items []IssueTypesWorkflowMapping) 
 	}()
 
 	type entry struct {
-		item  IssueTypesWorkflowMapping
+		item  WorkflowTransitionRule
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))

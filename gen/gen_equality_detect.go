@@ -1,6 +1,10 @@
 package gen
 
-import "github.com/ogen-go/ogen/gen/ir"
+import (
+	"sort"
+
+	"github.com/ogen-go/ogen/gen/ir"
+)
 
 const (
 	prefixOpt  = "Opt"
@@ -16,6 +20,12 @@ func (g *Generator) collectEqualitySpecs() {
 	for _, t := range g.tstorage.types {
 		g.collectFromType(t, visited)
 	}
+
+	// Map iteration order is random, so sort by type name to keep the
+	// generated output deterministic across runs
+	sort.Slice(g.equalitySpecs, func(i, j int) bool {
+		return g.equalitySpecs[i].TypeName < g.equalitySpecs[j].TypeName
+	})
 }
 
 // collectFromType recursively checks a type and its fields for uniqueItems arrays
@@ -214,8 +224,14 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			}
 
 			// Check if this is an array (either direct or wrapped in Optional/Nullable)
+			isNilSemanticArray := false
 			if field.Type.Kind == ir.KindArray {
 				isArray = true
+				// Optional and nullable arrays use nil itself to encode the
+				// absent or null state, which is distinct from an empty array
+				if field.Type.NilSemantic == ir.NilOptional || field.Type.NilSemantic == ir.NilNull {
+					isNilSemanticArray = true
+				}
 			}
 
 			// Check if this is a map of structs (either direct or wrapped in Optional/Nullable)
@@ -282,6 +298,7 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				IsArray:            isArray,
 				IsArrayOfStructs:   isArrayOfStructs,
 				IsArrayOfNullable:  isArrayOfNullable,
+				IsNilSemanticArray: isNilSemanticArray,
 				IsByteSlice:        isByteSlice,
 				IsOptionalNullable: isOptionalNullable(field.Type),
 			}

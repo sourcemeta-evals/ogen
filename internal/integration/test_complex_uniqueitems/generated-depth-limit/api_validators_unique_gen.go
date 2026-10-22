@@ -46,6 +46,126 @@ func validateUniqueLevel1(items []Level1) (err error) {
 	return nil
 }
 
+// validateUniqueLevel10 checks for duplicate items using hash-based detection.
+func validateUniqueLevel10(items []Level10) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  Level10
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash()
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueLevel11 checks for duplicate items using hash-based detection.
+func validateUniqueLevel11(items []Level11) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  Level11
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash()
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueLevel12 checks for duplicate items using hash-based detection.
+func validateUniqueLevel12(items []Level12) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  Level12
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash()
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
 // validateUniqueLevel2 checks for duplicate items using hash-based detection.
 func validateUniqueLevel2(items []Level2) (err error) {
 	if len(items) <= 1 {
@@ -344,126 +464,6 @@ func validateUniqueLevel9(items []Level9) (err error) {
 
 	type entry struct {
 		item  Level9
-		index int
-	}
-	buckets := make(map[uint64][]entry, len(items))
-
-	for i, item := range items {
-		hash := item.Hash()
-		bucket := buckets[hash]
-
-		for _, existing := range bucket {
-			if item.Equal(existing.item, 0) {
-				return &validate.DuplicateItemsError{
-					Indices: []int{existing.index, i},
-				}
-			}
-		}
-
-		buckets[hash] = append(bucket, entry{item: item, index: i})
-	}
-
-	return nil
-}
-
-// validateUniqueLevel10 checks for duplicate items using hash-based detection.
-func validateUniqueLevel10(items []Level10) (err error) {
-	if len(items) <= 1 {
-		return nil
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(*validate.DepthLimitError); ok {
-				err = e
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
-	type entry struct {
-		item  Level10
-		index int
-	}
-	buckets := make(map[uint64][]entry, len(items))
-
-	for i, item := range items {
-		hash := item.Hash()
-		bucket := buckets[hash]
-
-		for _, existing := range bucket {
-			if item.Equal(existing.item, 0) {
-				return &validate.DuplicateItemsError{
-					Indices: []int{existing.index, i},
-				}
-			}
-		}
-
-		buckets[hash] = append(bucket, entry{item: item, index: i})
-	}
-
-	return nil
-}
-
-// validateUniqueLevel11 checks for duplicate items using hash-based detection.
-func validateUniqueLevel11(items []Level11) (err error) {
-	if len(items) <= 1 {
-		return nil
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(*validate.DepthLimitError); ok {
-				err = e
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
-	type entry struct {
-		item  Level11
-		index int
-	}
-	buckets := make(map[uint64][]entry, len(items))
-
-	for i, item := range items {
-		hash := item.Hash()
-		bucket := buckets[hash]
-
-		for _, existing := range bucket {
-			if item.Equal(existing.item, 0) {
-				return &validate.DuplicateItemsError{
-					Indices: []int{existing.index, i},
-				}
-			}
-		}
-
-		buckets[hash] = append(bucket, entry{item: item, index: i})
-	}
-
-	return nil
-}
-
-// validateUniqueLevel12 checks for duplicate items using hash-based detection.
-func validateUniqueLevel12(items []Level12) (err error) {
-	if len(items) <= 1 {
-		return nil
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(*validate.DepthLimitError); ok {
-				err = e
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
-	type entry struct {
-		item  Level12
 		index int
 	}
 	buckets := make(map[uint64][]entry, len(items))

@@ -22,7 +22,11 @@ func (a ParameterValue) Hash() uint64 {
 	// Hash optional field: NumberValue
 	if a.NumberValue.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.NumberValue.Value)))
+		vNumberValue := a.NumberValue.Value
+		if vNumberValue == 0 {
+			vNumberValue = 0
+		}
+		h.Write([]byte(fmt.Sprintf("%v", vNumberValue)))
 	} else {
 		h.Write([]byte{0})
 	}

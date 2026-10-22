@@ -1,6 +1,7 @@
 package api
 
 import (
+	"math"
 	"testing"
 
 	"github.com/ogen-go/ogen/validate"
@@ -263,6 +264,67 @@ func TestValidateUniqueComprehensiveItem_NullableFieldDifferences(t *testing.T) 
 	err = validateUniqueComprehensiveItem(duplicates)
 	if err == nil {
 		t.Error("Expected duplicate error for two items with null nullable fields")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+}
+
+// Test that an absent optional array differs from a present empty array
+func TestValidateUniqueComprehensiveItem_AbsentVersusEmptyLabels(t *testing.T) {
+	itemWithAbsent := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	itemWithEmpty := itemWithAbsent
+	itemWithEmpty.Labels = []string{}
+
+	items := []ComprehensiveItem{itemWithAbsent, itemWithEmpty}
+
+	err := validateUniqueComprehensiveItem(items)
+	if err != nil {
+		t.Errorf("Expected no error for absent vs empty optional array, got: %v", err)
+	}
+
+	duplicateOfEmpty := itemWithEmpty
+	duplicateOfEmpty.Labels = []string{}
+
+	duplicates := []ComprehensiveItem{itemWithEmpty, duplicateOfEmpty}
+
+	err = validateUniqueComprehensiveItem(duplicates)
+	if err == nil {
+		t.Error("Expected duplicate error for two items with empty optional arrays")
+	}
+}
+
+// Test that positive and negative floating point zero hash into the same
+// bucket so their equality produces a duplicate error
+func TestValidateUniqueComprehensiveItem_NegativeZeroScore(t *testing.T) {
+	itemWithPositiveZero := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Score:    NewOptFloat64(0.0),
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	itemWithNegativeZero := itemWithPositiveZero
+	itemWithNegativeZero.Score = NewOptFloat64(math.Copysign(0, -1))
+
+	items := []ComprehensiveItem{itemWithPositiveZero, itemWithNegativeZero}
+
+	err := validateUniqueComprehensiveItem(items)
+	if err == nil {
+		t.Error("Expected duplicate error for items differing only in zero sign")
 	}
 	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
 		t.Errorf("Expected DuplicateItemsError, got: %T", err)

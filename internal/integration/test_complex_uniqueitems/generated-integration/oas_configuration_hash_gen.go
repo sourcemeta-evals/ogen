@@ -3,6 +3,7 @@
 package api
 
 import (
+	"encoding/binary"
 	"fmt"
 	"hash/fnv"
 )
@@ -28,7 +29,7 @@ func (a Configuration) Hash() uint64 {
 	}
 	// Hash array field: Features
 	for _, item := range a.Features {
-		h.Write([]byte(fmt.Sprintf("%v", item)))
+		binary.Write(h, binary.LittleEndian, item.Hash())
 	}
 	return h.Sum64()
 }

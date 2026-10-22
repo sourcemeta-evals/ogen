@@ -18,6 +18,9 @@ func (a IssueTypesWorkflowMapping) Equal(b IssueTypesWorkflowMapping, depth int)
 		return false
 	}
 	// Compare array field: IssueTypes
+	if (a.IssueTypes == nil) != (b.IssueTypes == nil) {
+		return false
+	}
 	if len(a.IssueTypes) != len(b.IssueTypes) {
 		return false
 	}

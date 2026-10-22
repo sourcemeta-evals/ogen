@@ -44,6 +44,9 @@ func (a GoldenItem) Equal(b GoldenItem, depth int) bool {
 		}
 	}
 	// Compare array field: Tags
+	if (a.Tags == nil) != (b.Tags == nil) {
+		return false
+	}
 	if len(a.Tags) != len(b.Tags) {
 		return false
 	}

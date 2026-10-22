@@ -38,6 +38,9 @@ func (a Configuration) Equal(b Configuration, depth int) bool {
 		}
 	}
 	// Compare array field: Features
+	if (a.Features == nil) != (b.Features == nil) {
+		return false
+	}
 	if len(a.Features) != len(b.Features) {
 		return false
 	}

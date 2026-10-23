@@ -136,19 +136,6 @@ func (g *Generator) collectNestedTypes(t *ir.Type, visited map[string]bool) {
 		return
 
 	case ir.KindStruct:
-		// Check if it's an Optional/Nullable wrapper - unwrap and recurse
-		name := t.Name
-		if len(name) > 3 && (name[:3] == prefixOpt || name[:3] == prefixNil) {
-			for _, field := range t.Fields {
-				if field.Name == fieldValue {
-					// Recursively process the wrapped type (don't mark wrapper as visited)
-					g.collectNestedTypes(field.Type, visited)
-					return
-				}
-			}
-			return
-		}
-
 		// Mark as visited to prevent infinite recursion
 		if t.Name != "" {
 			visited[t.Name] = true
@@ -288,52 +275,46 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			if mapType.Kind != ir.KindMap && unwrapped != nil && unwrapped.Kind == ir.KindMap {
 				mapType = unwrapped
 			}
+			isMapOfFloats := false
 			if mapType.Kind == ir.KindMap && mapType.Item != nil {
-				valueType := unwrapOptional(mapType.Item)
-				if valueType != nil && valueType.Kind == ir.KindStruct {
+				// Only direct struct values have generated Equal and Hash
+				// methods. Wrapper values, such as nullable objects, have
+				// neither and fall through to the reflect-based path
+				if mapType.Item.Kind == ir.KindStruct {
 					isMapOfStructs = true
+				}
+				// Resolved from the IR because named map types render their
+				// type name, not map[...] syntax, in the Go representation
+				if mapType.Item.Kind == ir.KindPrimitive &&
+					(mapType.Item.Primitive == ir.Float32 || mapType.Item.Primitive == ir.Float64) {
+					isMapOfFloats = true
 				}
 			}
 
 			// Check if this is an array of structs or nullable wrappers (either direct or wrapped)
 			isArrayOfNullable := false
 			arrayType := field.Type
+			classifyArrayItem := func(item *ir.Type) {
+				if item == nil {
+					return
+				}
+				if item.Kind == ir.KindGeneric && item.GenericVariant.OnlyNullable() {
+					isArrayOfNullable = true
+					// Also check if the VALUE inside the nullable wrapper is a struct
+					if inner := unwrapOptional(item); inner != nil && inner.Kind == ir.KindStruct {
+						isArrayOfStructs = true
+					}
+					return
+				}
+				if item.Kind == ir.KindStruct {
+					isArrayOfStructs = true
+				}
+			}
 			if arrayType.Kind == ir.KindArray && arrayType.Item != nil {
-				// Check if item is a nullable wrapper (can be Generic or Struct)
-				itemName := arrayType.Item.Name
-				if len(itemName) > 3 && itemName[:3] == "Nil" &&
-					(arrayType.Item.Kind == ir.KindStruct || arrayType.Item.Kind == ir.KindGeneric) {
-					isArrayOfNullable = true
-					// Also check if the VALUE inside the nullable wrapper is a struct
-					innerType := unwrapOptional(arrayType.Item)
-					if innerType != nil && innerType.Kind == ir.KindStruct {
-						isArrayOfStructs = true
-					}
-				} else {
-					// Direct struct array (not wrapped in nullable)
-					itemType := unwrapOptional(arrayType.Item)
-					if itemType != nil && itemType.Kind == ir.KindStruct {
-						isArrayOfStructs = true
-					}
-				}
+				classifyArrayItem(arrayType.Item)
 			} else if unwrapped != nil && unwrapped.Kind == ir.KindArray && unwrapped.Item != nil {
-				// Check wrapped array (OptT[[]Struct] or NilT[[]Struct])
-				itemName := unwrapped.Item.Name
-				if len(itemName) > 3 && itemName[:3] == "Nil" &&
-					(unwrapped.Item.Kind == ir.KindStruct || unwrapped.Item.Kind == ir.KindGeneric) {
-					isArrayOfNullable = true
-					// Also check if the VALUE inside the nullable wrapper is a struct
-					innerType := unwrapOptional(unwrapped.Item)
-					if innerType != nil && innerType.Kind == ir.KindStruct {
-						isArrayOfStructs = true
-					}
-				} else {
-					// Direct struct array (not wrapped in nullable)
-					itemType := unwrapOptional(unwrapped.Item)
-					if itemType != nil && itemType.Kind == ir.KindStruct {
-						isArrayOfStructs = true
-					}
-				}
+				// Wrapped array (OptT[[]Struct] or NilT[[]Struct])
+				classifyArrayItem(unwrapped.Item)
 			}
 
 			// Classify the remaining array element and map value shapes:
@@ -375,17 +356,36 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				}
 			}
 
+			// Formatted scalars whose Go representation contains pointers
+			// need value-based comparison instead of == or reflection
+			isURL := false
+			isDecimal := false
+			scalarType := field.Type
+			if unwrapped != nil && unwrapped != field.Type {
+				scalarType = unwrapped
+			}
+			if scalarType != nil && scalarType.Kind == ir.KindPrimitive {
+				switch scalarType.Primitive {
+				case ir.URL:
+					isURL = true
+				case ir.Decimal:
+					isDecimal = true
+				}
+			}
+
 			// Field values with no == operator, no generated Equal method
 			// and no dedicated path above are compared with reflect.DeepEqual
 			isDeepOnly := false
 			switch categorizeFieldType(field.Type) {
 			case ir.FieldTypePrimitive:
-				if !isRawJSON && !isByteSlice && !ir.ComparableWithOperator(field.Type) {
+				if !isRawJSON && !isByteSlice && !isURL && !isDecimal &&
+					!ir.ComparableWithOperator(field.Type) {
 					isDeepOnly = true
 				}
 			case ir.FieldTypeOptional, ir.FieldTypeNullable:
 				if unwrapped != nil && !isNestedObject(field.Type) && !isMap && !isArray &&
-					!isRawJSON && !isByteSlice && !ir.ComparableWithOperator(unwrapped) {
+					!isRawJSON && !isByteSlice && !isURL && !isDecimal &&
+					!ir.ComparableWithOperator(unwrapped) {
 					isDeepOnly = true
 				}
 			case ir.FieldTypePointer:
@@ -402,6 +402,7 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				IsNested:           isNestedObject(field.Type),
 				IsMap:              isMap,
 				IsMapOfStructs:     isMapOfStructs,
+				IsMapOfFloats:      isMapOfFloats,
 				IsMapOfRaw:         isMapOfRaw,
 				IsMapOfDeep:        isMapOfDeep,
 				IsArray:            isArray,
@@ -412,6 +413,8 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				IsNilSemanticArray: isNilSemanticArray,
 				IsByteSlice:        isByteSlice,
 				IsRawJSON:          isRawJSON,
+				IsURL:              isURL,
+				IsDecimal:          isDecimal,
 				IsDeepOnly:         isDeepOnly,
 				IsOptionalNullable: isOptionalNullable(field.Type),
 			}
@@ -435,7 +438,9 @@ func hasNestedObjects(t *ir.Type) bool {
 	return t.Kind == ir.KindStruct
 }
 
-// unwrapOptional unwraps Generic optional/nullable types to get the underlying type
+// unwrapOptional unwraps Generic optional/nullable types to get the underlying type.
+// Wrappers are always KindGeneric: user-defined structs whose names merely start
+// with Opt or Nil are ordinary objects and must not be unwrapped.
 func unwrapOptional(t *ir.Type) *ir.Type {
 	if t == nil {
 		return nil
@@ -444,15 +449,6 @@ func unwrapOptional(t *ir.Type) *ir.Type {
 	// Unwrap generic types (OptT, NilT)
 	if t.Kind == ir.KindGeneric && t.GenericOf != nil {
 		return t.GenericOf
-	}
-
-	// Unwrap struct-based optional wrappers
-	if t.Kind == ir.KindStruct && len(t.Name) > 3 && (t.Name[:3] == prefixOpt || t.Name[:3] == prefixNil) {
-		for _, field := range t.Fields {
-			if field.Name == fieldValue {
-				return field.Type
-			}
-		}
 	}
 
 	return t
@@ -472,18 +468,8 @@ func isNestedObject(t *ir.Type) bool {
 		}
 		return false
 	case ir.KindStruct:
-		// Check if this is an Optional/Nullable wrapper
-		name := t.Name
-		if len(name) > 3 && (name[:3] == prefixOpt || name[:3] == prefixNil) {
-			// Look for a Value field that is a nested object
-			for _, field := range t.Fields {
-				if field.Name == fieldValue {
-					return isNestedObject(field.Type)
-				}
-			}
-			return false
-		}
-		// Regular struct - it's a nested object
+		// Every plain struct is a nested object. Wrappers are KindGeneric,
+		// so names starting with Opt or Nil carry no meaning here
 		return true
 	case ir.KindPointer:
 		// Pointer to a nested object - compare via Equal() on the pointee
@@ -508,10 +494,9 @@ func isOptionalNullable(t *ir.Type) bool {
 	if t == nil {
 		return false
 	}
-	name := ""
 	switch t.Kind {
-	case ir.KindGeneric, ir.KindStruct:
-		name = t.Name
+	case ir.KindGeneric:
+		return t.GenericVariant.NullableOptional()
 	case ir.KindAlias:
 		if t.AliasTo != nil {
 			return isOptionalNullable(t.AliasTo)
@@ -520,8 +505,6 @@ func isOptionalNullable(t *ir.Type) bool {
 	default:
 		return false
 	}
-	const prefixOptNil = "OptNil"
-	return len(name) > len(prefixOptNil) && name[:len(prefixOptNil)] == prefixOptNil
 }
 
 // categorizeFieldType maps an IR type to a FieldTypeCategory
@@ -543,12 +526,11 @@ func categorizeFieldType(t *ir.Type) ir.FieldTypeCategory {
 		}
 
 	case ir.KindGeneric:
-		// Generic types like OptT, NilT - check by name
-		name := t.Name
-		if len(name) > 3 && name[:3] == prefixOpt {
+		// Generic types like OptT, NilT - classify by the wrapper variant
+		if t.GenericVariant.Optional {
 			return ir.FieldTypeOptional
 		}
-		if len(name) > 3 && name[:3] == prefixNil {
+		if t.GenericVariant.Nullable {
 			return ir.FieldTypeNullable
 		}
 		// Other generic types - check the underlying type
@@ -558,15 +540,8 @@ func categorizeFieldType(t *ir.Type) ir.FieldTypeCategory {
 		return ir.FieldTypePrimitive
 
 	case ir.KindStruct:
-		// Check if this is an optional/nullable wrapper type
-		name := t.Name
-		if len(name) > 3 && name[:3] == prefixOpt {
-			return ir.FieldTypeOptional
-		}
-		if len(name) > 3 && name[:3] == prefixNil {
-			return ir.FieldTypeNullable
-		}
-		// Regular nested object
+		// Every plain struct is a nested object. Wrappers are KindGeneric,
+		// so user-defined structs named Opt* or Nil* stay ordinary objects
 		return ir.FieldTypeNestedObject
 
 	case ir.KindArray:

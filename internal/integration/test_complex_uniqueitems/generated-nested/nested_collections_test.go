@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"math"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -165,4 +166,88 @@ func TestValidateUniqueAddGridBatchReqItem(t *testing.T) {
 
 	duplicate := AddGridBatchReqItem{Key: NewOptString("k"), Label: NewOptString("a")}
 	requireDuplicateError(t, validateUniqueAddGridBatchReqItem([]AddGridBatchReqItem{first, duplicate}), "equal items")
+}
+
+// Ordinary nested records whose names begin with Opt or Nil must compare as
+// plain objects through their generated Equal methods, not as wrappers.
+func TestValidateUniqueRecord_WrapperLikeNames(t *testing.T) {
+	first := Record{
+		ID:        "r",
+		Options:   Options{Retries: 3, Verbose: NewOptBool(true)},
+		NilStatus: NilStatus{Code: 200, Label: NewOptString("ok")},
+	}
+	differentOptions := Record{
+		ID:        "r",
+		Options:   Options{Retries: 5, Verbose: NewOptBool(true)},
+		NilStatus: NilStatus{Code: 200, Label: NewOptString("ok")},
+	}
+	requireNoError(t, validateUniqueRecord([]Record{first, differentOptions}), "different Options contents")
+
+	differentStatus := Record{
+		ID:        "r",
+		Options:   Options{Retries: 3, Verbose: NewOptBool(true)},
+		NilStatus: NilStatus{Code: 404, Label: NewOptString("ok")},
+	}
+	requireNoError(t, validateUniqueRecord([]Record{first, differentStatus}), "different NilStatus contents")
+
+	duplicate := Record{
+		ID:        "r",
+		Options:   Options{Retries: 3, Verbose: NewOptBool(true)},
+		NilStatus: NilStatus{Code: 200, Label: NewOptString("ok")},
+	}
+	requireDuplicateError(t, validateUniqueRecord([]Record{first, duplicate}), "equal records")
+}
+
+// Required named float maps must hash signed zero the same way the equality
+// comparison treats it, or the duplicate lands in a different bucket.
+func TestValidateUniqueGrid_ScoresSignedZero(t *testing.T) {
+	positive := Grid{ID: "g", Scores: GridScores{"w": 0}}
+	negative := Grid{ID: "g", Scores: GridScores{"w": math.Copysign(0, -1)}}
+	if positive.Hash(0) != negative.Hash(0) {
+		t.Fatalf("items that Equal() treats as equal must hash identically")
+	}
+	requireDuplicateError(t, validateUniqueGrid([]Grid{positive, negative}), "signed zero scores")
+}
+
+// Maps whose values are nullable object wrappers have no generated methods on
+// the wrapper, so they compare through the reflect-based path.
+func TestValidateUniqueGrid_AttachmentsNullableValues(t *testing.T) {
+	null := Grid{ID: "g", Attachments: GridAttachments{
+		"a": {Null: true},
+	}}
+	present := Grid{ID: "g", Attachments: GridAttachments{
+		"a": NewNilGridAttachmentsItem(GridAttachmentsItem{Name: NewOptString("doc")}),
+	}}
+	requireNoError(t, validateUniqueGrid([]Grid{null, present}), "null and present values")
+
+	duplicate := Grid{ID: "g", Attachments: GridAttachments{
+		"a": NewNilGridAttachmentsItem(GridAttachmentsItem{Name: NewOptString("doc")}),
+	}}
+	requireDuplicateError(t, validateUniqueGrid([]Grid{present, duplicate}), "equal attachment maps")
+}
+
+// url.URL contains a pointer, so independently parsed equal URLs are unequal
+// under == and must compare by value instead.
+func TestValidateUniqueGrid_LinkByValue(t *testing.T) {
+	first, err := url.Parse("https://user:secret@example.com/grids?page=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := url.Parse("https://user:secret@example.com/grids?page=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	left := Grid{ID: "g", Link: NewOptURI(*first)}
+	right := Grid{ID: "g", Link: NewOptURI(*second)}
+	if left.Hash(0) != right.Hash(0) {
+		t.Fatalf("equal URLs must hash identically")
+	}
+	requireDuplicateError(t, validateUniqueGrid([]Grid{left, right}), "independently parsed equal URLs")
+
+	other, err := url.Parse("https://user:secret@example.com/grids?page=2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	requireNoError(t, validateUniqueGrid([]Grid{left, {ID: "g", Link: NewOptURI(*other)}}), "different URLs")
 }

@@ -85,3 +85,163 @@ func validateUniqueGrid(items []Grid) (err error) {
 
 	return nil
 }
+
+// validateUniqueGridAttachmentsItem checks for duplicate items using hash-based detection.
+func validateUniqueGridAttachmentsItem(items []GridAttachmentsItem) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  GridAttachmentsItem
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash(0)
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueNilStatus checks for duplicate items using hash-based detection.
+func validateUniqueNilStatus(items []NilStatus) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  NilStatus
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash(0)
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueOptions checks for duplicate items using hash-based detection.
+func validateUniqueOptions(items []Options) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  Options
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash(0)
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}
+
+// validateUniqueRecord checks for duplicate items using hash-based detection.
+func validateUniqueRecord(items []Record) (err error) {
+	if len(items) <= 1 {
+		return nil
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*validate.DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	type entry struct {
+		item  Record
+		index int
+	}
+	buckets := make(map[uint64][]entry, len(items))
+
+	for i, item := range items {
+		hash := item.Hash(0)
+		bucket := buckets[hash]
+
+		for _, existing := range bucket {
+			if item.Equal(existing.item, 0) {
+				return &validate.DuplicateItemsError{
+					Indices: []int{existing.index, i},
+				}
+			}
+		}
+
+		buckets[hash] = append(bucket, entry{item: item, index: i})
+	}
+
+	return nil
+}

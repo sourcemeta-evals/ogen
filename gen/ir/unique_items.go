@@ -47,6 +47,9 @@ func ComparableWithOperator(t *Type) bool {
 		switch t.Primitive {
 		case ByteSlice, MAC, File, Custom:
 			return false
+		case Decimal, URL:
+			// Both contain pointers, so == compares identity, not value
+			return false
 		default:
 			return true
 		}

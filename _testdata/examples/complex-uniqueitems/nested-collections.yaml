@@ -99,10 +99,17 @@ components:
           type: array
           uniqueItems: true
           items: {}
+        records:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Record'
     Grid:
       type: object
       required:
         - id
+        - scores
+        - attachments
       properties:
         id:
           type: string
@@ -123,4 +130,51 @@ components:
           additionalProperties:
             type: number
             format: double
+        scores:
+          type: object
+          additionalProperties:
+            type: number
+            format: double
+        attachments:
+          type: object
+          additionalProperties:
+            type: object
+            nullable: true
+            properties:
+              name:
+                type: string
+        link:
+          type: string
+          format: uri
         extra: {}
+    Record:
+      type: object
+      required:
+        - id
+        - options
+        - nilStatus
+      properties:
+        id:
+          type: string
+        options:
+          $ref: '#/components/schemas/Options'
+        nilStatus:
+          $ref: '#/components/schemas/NilStatus'
+    Options:
+      type: object
+      required:
+        - retries
+      properties:
+        retries:
+          type: integer
+        verbose:
+          type: boolean
+    NilStatus:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: integer
+        label:
+          type: string

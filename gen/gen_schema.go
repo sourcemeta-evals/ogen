@@ -191,5 +191,19 @@ func GenerateSchema(schema *jsonschema.Schema, fs FileSystem, opts GenerateSchem
 		return errors.Wrap(err, "write")
 	}
 
+	// The validators template dispatches uniqueItems arrays of struct items
+	// to generated validateUnique functions, so this entry point must emit
+	// the Equal and Hash methods and the uniqueness validators too.
+	equality := &Generator{tstorage: ctx.local}
+	equality.collectEqualitySpecs()
+	if len(equality.equalitySpecs) > 0 {
+		if err := equality.generateEqualityMethodsWithFS(fs, opts.PkgName); err != nil {
+			return errors.Wrap(err, "generate equality methods")
+		}
+		if err := equality.generateUniqueValidators(fs, opts.PkgName); err != nil {
+			return errors.Wrap(err, "generate unique validators")
+		}
+	}
+
 	return nil
 }

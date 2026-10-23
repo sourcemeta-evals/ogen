@@ -159,6 +159,28 @@ func (s *Collection) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if s.Records == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Records)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validateUniqueRecord(s.Records); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "records",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -232,6 +254,17 @@ func (s *Grid) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if err := s.Scores.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "scores",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -244,6 +277,28 @@ func (s GridLabelsByGroup) Validate() error {
 		if err := func() error {
 			if elem == nil {
 				return errors.New("nil is invalid value")
+			}
+			return nil
+		}(); err != nil {
+			failures = append(failures, validate.FieldError{
+				Name:  key,
+				Error: err,
+			})
+		}
+	}
+
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s GridScores) Validate() error {
+	var failures []validate.FieldError
+	for key, elem := range s {
+		if err := func() error {
+			if err := (validate.Float{}).Validate(float64(elem)); err != nil {
+				return errors.Wrap(err, "float")
 			}
 			return nil
 		}(); err != nil {

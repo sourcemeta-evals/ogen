@@ -54,6 +54,15 @@ type FieldEqualitySpec struct {
 	// IsByteSlice indicates if this field is a binary byte slice ([]byte)
 	IsByteSlice bool
 
+	// IsURL indicates the field value (or the wrapped value) is a url.URL,
+	// compared through String() because url.URL contains a pointer
+	IsURL bool
+
+	// IsDecimal indicates the field value (or the wrapped value) is a
+	// decimal.Decimal, compared through its Equal method because the ==
+	// operator compares an internal pointer
+	IsDecimal bool
+
 	// IsRawJSON indicates if this field holds a raw JSON value (jx.Raw)
 	// that must be compared semantically, not byte by byte
 	IsRawJSON bool
@@ -72,6 +81,11 @@ type FieldEqualitySpec struct {
 	// operator and no generated Equal method, so the whole field is
 	// compared with reflect.DeepEqual
 	IsArrayOfDeep bool
+
+	// IsMapOfFloats indicates a map field whose values are floating point
+	// numbers, resolved from the IR because named map types do not expose
+	// map[...] syntax in their Go representation
+	IsMapOfFloats bool
 
 	// IsMapOfRaw indicates a map field whose values are raw JSON values
 	// (jx.Raw) compared semantically value by value
@@ -146,6 +160,13 @@ type FieldHashSpec struct {
 	// its byte representation, so the bytes must not feed the hash
 	IsRawJSON bool
 
+	// IsURL indicates the field value is a url.URL, hashed through String()
+	IsURL bool
+
+	// IsDecimal indicates the field value is a decimal.Decimal, excluded
+	// from the hash because equal decimals can format differently
+	IsDecimal bool
+
 	// IsDeepOnly indicates the field is compared with reflect.DeepEqual, so
 	// no formatting of it is guaranteed stable across equal values
 	IsDeepOnly bool
@@ -155,6 +176,9 @@ type FieldHashSpec struct {
 
 	// IsArrayOfDeep indicates array elements are compared with reflect.DeepEqual
 	IsArrayOfDeep bool
+
+	// IsMapOfFloats indicates map values are floating point numbers
+	IsMapOfFloats bool
 
 	// IsMapOfRaw indicates map values are raw JSON values
 	IsMapOfRaw bool

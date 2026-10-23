@@ -25,8 +25,9 @@ func TestCreateEqualityMethodSpec_ArrayDetection(t *testing.T) {
 					{
 						Name: "OptionalArray",
 						Type: &ir.Type{
-							Name: "OptStringArray",
-							Kind: ir.KindGeneric,
+							Name:           "OptStringArray",
+							Kind:           ir.KindGeneric,
+							GenericVariant: ir.GenericVariant{Optional: true},
 							GenericOf: &ir.Type{
 								Kind: ir.KindArray,
 								Item: &ir.Type{
@@ -54,8 +55,9 @@ func TestCreateEqualityMethodSpec_ArrayDetection(t *testing.T) {
 					{
 						Name: "NullableArray",
 						Type: &ir.Type{
-							Name: "NilIntArray",
-							Kind: ir.KindGeneric,
+							Name:           "NilIntArray",
+							Kind:           ir.KindGeneric,
+							GenericVariant: ir.GenericVariant{Nullable: true},
 							GenericOf: &ir.Type{
 								Kind: ir.KindArray,
 								Item: &ir.Type{
@@ -108,8 +110,9 @@ func TestCreateEqualityMethodSpec_ArrayDetection(t *testing.T) {
 					{
 						Name: "OptionalStructArray",
 						Type: &ir.Type{
-							Name: "OptStructArray",
-							Kind: ir.KindGeneric,
+							Name:           "OptStructArray",
+							Kind:           ir.KindGeneric,
+							GenericVariant: ir.GenericVariant{Optional: true},
 							GenericOf: &ir.Type{
 								Kind: ir.KindArray,
 								Item: &ir.Type{
@@ -138,8 +141,9 @@ func TestCreateEqualityMethodSpec_ArrayDetection(t *testing.T) {
 					{
 						Name: "OptionalMap",
 						Type: &ir.Type{
-							Name: "OptStringMap",
-							Kind: ir.KindGeneric,
+							Name:           "OptStringMap",
+							Kind:           ir.KindGeneric,
+							GenericVariant: ir.GenericVariant{Optional: true},
 							GenericOf: &ir.Type{
 								Kind: ir.KindMap,
 							},
@@ -952,9 +956,10 @@ func TestWriteFieldHash(t *testing.T) {
 		{
 			name: "float map values normalize negative zero",
 			field: ir.FieldHashSpec{
-				FieldName: "Scores",
-				FieldType: ir.FieldTypeMap,
-				GoType:    "map[string]float64",
+				FieldName:     "Scores",
+				FieldType:     ir.FieldTypeMap,
+				GoType:        "GridScores",
+				IsMapOfFloats: true,
 			},
 			expectedContains: []string{
 				"v := a.Scores[k]",
@@ -1009,4 +1014,48 @@ func TestWriteFieldHash(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCategorizeFieldTypeWrapperLikeStructNames(t *testing.T) {
+	stringType := &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}
+
+	// Ordinary structs whose names begin with Opt or Nil are nested
+	// objects: only KindGeneric types are wrappers
+	options := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "Options",
+		Fields: []*ir.Field{
+			{Name: "Retries", Type: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.Int}},
+		},
+	}
+	require.Equal(t, ir.FieldTypeNestedObject, categorizeFieldType(options))
+	require.True(t, isNestedObject(options))
+	require.False(t, isOptionalNullable(options))
+	require.Same(t, options, unwrapOptional(options))
+
+	nilStatus := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "NilStatus",
+		Fields: []*ir.Field{
+			{Name: "Code", Type: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.Int}},
+		},
+	}
+	require.Equal(t, ir.FieldTypeNestedObject, categorizeFieldType(nilStatus))
+
+	optWrapper := &ir.Type{
+		Kind:           ir.KindGeneric,
+		Name:           "OptString",
+		GenericVariant: ir.GenericVariant{Optional: true},
+		GenericOf:      stringType,
+	}
+	require.Equal(t, ir.FieldTypeOptional, categorizeFieldType(optWrapper))
+
+	optNilWrapper := &ir.Type{
+		Kind:           ir.KindGeneric,
+		Name:           "OptNilString",
+		GenericVariant: ir.GenericVariant{Optional: true, Nullable: true},
+		GenericOf:      stringType,
+	}
+	require.Equal(t, ir.FieldTypeOptional, categorizeFieldType(optNilWrapper))
+	require.True(t, isOptionalNullable(optNilWrapper))
 }

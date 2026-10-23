@@ -80,6 +80,18 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\tif !bytes.Equal(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\treturn false\n")
 			fmt.Fprintf(b, "\t}\n")
+		case field.IsURL:
+			// url.URL contains a pointer, so == compares identity
+			fmt.Fprintf(b, "\t// Compare URL field by value: %s\n", field.FieldName)
+			fmt.Fprintf(b, "\tif a.%s.String() != b.%s.String() {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\treturn false\n")
+			fmt.Fprintf(b, "\t}\n")
+		case field.IsDecimal:
+			// decimal.Decimal contains a pointer, so == compares identity
+			fmt.Fprintf(b, "\t// Compare decimal field by value: %s\n", field.FieldName)
+			fmt.Fprintf(b, "\tif !a.%s.Equal(b.%s) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\treturn false\n")
+			fmt.Fprintf(b, "\t}\n")
 		case field.IsDeepOnly:
 			// No == operator for this type
 			fmt.Fprintf(b, "\t// Compare field without == operator: %s\n", field.FieldName)
@@ -136,6 +148,16 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "%sif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
 			fmt.Fprintf(b, "%s}\n", valueIndent)
+		case field.IsURL:
+			// Optional wrapper around url.URL - compare by value
+			fmt.Fprintf(b, "%sif a.%s.Value.String() != b.%s.Value.String() {\n", valueIndent, field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
+			fmt.Fprintf(b, "%s}\n", valueIndent)
+		case field.IsDecimal:
+			// Optional wrapper around decimal.Decimal - compare by value
+			fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
+			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsDeepOnly:
 			// Optional wrapper around a value without == operator
 			fmt.Fprintf(b, "%sif !reflect.DeepEqual(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
@@ -185,6 +207,16 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		case field.IsByteSlice:
 			// Nullable wrapper around byte slice - use bytes.Equal()
 			fmt.Fprintf(b, "\t\tif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
+		case field.IsURL:
+			// Nullable wrapper around url.URL - compare by value
+			fmt.Fprintf(b, "\t\tif a.%s.Value.String() != b.%s.Value.String() {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
+		case field.IsDecimal:
+			// Nullable wrapper around decimal.Decimal - compare by value
+			fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\t\treturn false\n")
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsDeepOnly:
@@ -363,9 +395,12 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 			IsArrayOfStructs:   field.IsArrayOfStructs,
 			IsArrayOfNullable:  field.IsArrayOfNullable,
 			IsMapOfStructs:     field.IsMapOfStructs,
+			IsMapOfFloats:      field.IsMapOfFloats,
 			IsMap:              field.IsMap,
 			IsArray:            field.IsArray,
 			IsRawJSON:          field.IsRawJSON,
+			IsURL:              field.IsURL,
+			IsDecimal:          field.IsDecimal,
 			IsDeepOnly:         field.IsDeepOnly,
 			IsArrayOfRaw:       field.IsArrayOfRaw,
 			IsArrayOfDeep:      field.IsArrayOfDeep,
@@ -427,6 +462,18 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 
 	switch field.FieldType {
 	case ir.FieldTypePrimitive:
+		if field.IsURL {
+			// url.URL formatting through %v exposes pointer fields, so hash
+			// the canonical string the Equal comparison uses
+			fmt.Fprintf(b, "\t// Hash URL field by value: %s\n", field.FieldName)
+			fmt.Fprintf(b, "\th.Write([]byte(a.%s.String()))\n", field.FieldName)
+			return
+		}
+		if field.IsDecimal {
+			// Equal decimals can format differently, so the field is excluded
+			fmt.Fprintf(b, "\t// Field %s is excluded from the hash: equal decimals can format differently\n", field.FieldName)
+			return
+		}
 		if field.IsRawJSON || field.IsDeepOnly {
 			// Equality for this field ignores representation details the
 			// formatted bytes would expose
@@ -548,7 +595,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 		case field.IsMapOfRaw, field.IsMapOfDeep:
 			// Values compare semantically, so only the keys feed the hash
 			fmt.Fprintf(b, "\t\t// Map values excluded from the hash: they compare semantically\n")
-		case isFloatGoType(mapValueGoType(field.GoType)):
+		case field.IsMapOfFloats:
 			writeFloatHash(b, "\t\t", "v", fmt.Sprintf("a.%s[k]", field.FieldName))
 		default:
 			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s[k])))\n", field.FieldName)
@@ -571,6 +618,10 @@ func (g *Generator) writeWrappedValueHash(b *strings.Builder, field ir.FieldHash
 		// Wrapper around nested object - call Hash()
 		fmt.Fprintf(b, "%snestedHash%s := %s\n", indent, field.FieldName, nestedHashCall(expr))
 		fmt.Fprintf(b, "%sbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", indent, field.FieldName)
+	case field.IsURL:
+		fmt.Fprintf(b, "%sh.Write([]byte(%s.String()))\n", indent, expr)
+	case field.IsDecimal:
+		fmt.Fprintf(b, "%s// Wrapped decimal excluded from the hash: equal decimals can format differently\n", indent)
 	case field.IsMap || field.IsArray || field.IsRawJSON || field.IsDeepOnly:
 		// Formatting a wrapped container or semantic value would expose
 		// representation details that Equal() ignores, such as inactive
@@ -582,15 +633,6 @@ func (g *Generator) writeWrappedValueHash(b *strings.Builder, field ir.FieldHash
 	default:
 		fmt.Fprintf(b, "%sh.Write([]byte(fmt.Sprintf(\"%%v\", %s)))\n", indent, expr)
 	}
-}
-
-// mapValueGoType returns the value type of a map Go type
-func mapValueGoType(goType string) string {
-	index := strings.Index(goType, "]")
-	if !strings.HasPrefix(goType, "map[") || index < 0 {
-		return ""
-	}
-	return goType[index+1:]
 }
 
 // writeFormattedCode formats and writes code to a file using FileSystem

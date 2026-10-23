@@ -5,6 +5,7 @@ package api
 import (
 	"fmt"
 	"hash/fnv"
+	"sort"
 
 	"github.com/ogen-go/ogen/validate"
 )
@@ -36,6 +37,37 @@ func (a Grid) Hash(depth int) uint64 {
 	if a.Weights.Set {
 		h.Write([]byte{1})
 		// Wrapped value excluded from the hash: only its presence participates
+	} else {
+		h.Write([]byte{0})
+	}
+	// Hash map field: Scores (sorted keys)
+	keysScores := make([]string, 0, len(a.Scores))
+	for k := range a.Scores {
+		keysScores = append(keysScores, k)
+	}
+	sort.Strings(keysScores)
+	for _, k := range keysScores {
+		h.Write([]byte(k))
+		v := a.Scores[k]
+		if v == 0 {
+			v = 0
+		}
+		h.Write([]byte(fmt.Sprintf("%v", v)))
+	}
+	// Hash map field: Attachments (sorted keys)
+	keysAttachments := make([]string, 0, len(a.Attachments))
+	for k := range a.Attachments {
+		keysAttachments = append(keysAttachments, k)
+	}
+	sort.Strings(keysAttachments)
+	for _, k := range keysAttachments {
+		h.Write([]byte(k))
+		// Map values excluded from the hash: they compare semantically
+	}
+	// Hash optional field: Link
+	if a.Link.Set {
+		h.Write([]byte{1})
+		h.Write([]byte(a.Link.Value.String()))
 	} else {
 		h.Write([]byte{0})
 	}

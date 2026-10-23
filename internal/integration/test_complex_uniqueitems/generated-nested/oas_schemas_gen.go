@@ -3,6 +3,8 @@
 package api
 
 import (
+	"net/url"
+
 	"github.com/go-faster/jx"
 )
 
@@ -52,6 +54,7 @@ type Collection struct {
 	Tagsets  []CollectionTagsetsItem   `json:"tagsets"`
 	Maybes   []NilCollectionMaybesItem `json:"maybes"`
 	Anything []jx.Raw                  `json:"anything"`
+	Records  []Record                  `json:"records"`
 }
 
 // GetGrids returns the value of Grids.
@@ -79,6 +82,11 @@ func (s *Collection) GetAnything() []jx.Raw {
 	return s.Anything
 }
 
+// GetRecords returns the value of Records.
+func (s *Collection) GetRecords() []Record {
+	return s.Records
+}
+
 // SetGrids sets the value of Grids.
 func (s *Collection) SetGrids(val []Grid) {
 	s.Grids = val
@@ -102,6 +110,11 @@ func (s *Collection) SetMaybes(val []NilCollectionMaybesItem) {
 // SetAnything sets the value of Anything.
 func (s *Collection) SetAnything(val []jx.Raw) {
 	s.Anything = val
+}
+
+// SetRecords sets the value of Records.
+func (s *Collection) SetRecords(val []Record) {
+	s.Records = val
 }
 
 type CollectionMaybesItem struct {
@@ -149,6 +162,9 @@ type Grid struct {
 	Matrix        [][]int              `json:"matrix"`
 	LabelsByGroup OptGridLabelsByGroup `json:"labelsByGroup"`
 	Weights       OptGridWeights       `json:"weights"`
+	Scores        GridScores           `json:"scores"`
+	Attachments   GridAttachments      `json:"attachments"`
+	Link          OptURI               `json:"link"`
 	Extra         jx.Raw               `json:"extra"`
 }
 
@@ -170,6 +186,21 @@ func (s *Grid) GetLabelsByGroup() OptGridLabelsByGroup {
 // GetWeights returns the value of Weights.
 func (s *Grid) GetWeights() OptGridWeights {
 	return s.Weights
+}
+
+// GetScores returns the value of Scores.
+func (s *Grid) GetScores() GridScores {
+	return s.Scores
+}
+
+// GetAttachments returns the value of Attachments.
+func (s *Grid) GetAttachments() GridAttachments {
+	return s.Attachments
+}
+
+// GetLink returns the value of Link.
+func (s *Grid) GetLink() OptURI {
+	return s.Link
 }
 
 // GetExtra returns the value of Extra.
@@ -197,9 +228,49 @@ func (s *Grid) SetWeights(val OptGridWeights) {
 	s.Weights = val
 }
 
+// SetScores sets the value of Scores.
+func (s *Grid) SetScores(val GridScores) {
+	s.Scores = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *Grid) SetAttachments(val GridAttachments) {
+	s.Attachments = val
+}
+
+// SetLink sets the value of Link.
+func (s *Grid) SetLink(val OptURI) {
+	s.Link = val
+}
+
 // SetExtra sets the value of Extra.
 func (s *Grid) SetExtra(val jx.Raw) {
 	s.Extra = val
+}
+
+type GridAttachments map[string]NilGridAttachmentsItem
+
+func (s *GridAttachments) init() GridAttachments {
+	m := *s
+	if m == nil {
+		m = map[string]NilGridAttachmentsItem{}
+		*s = m
+	}
+	return m
+}
+
+type GridAttachmentsItem struct {
+	Name OptString `json:"name"`
+}
+
+// GetName returns the value of Name.
+func (s *GridAttachmentsItem) GetName() OptString {
+	return s.Name
+}
+
+// SetName sets the value of Name.
+func (s *GridAttachmentsItem) SetName(val OptString) {
+	s.Name = val
 }
 
 type GridLabelsByGroup map[string][]string
@@ -208,6 +279,17 @@ func (s *GridLabelsByGroup) init() GridLabelsByGroup {
 	m := *s
 	if m == nil {
 		m = map[string][]string{}
+		*s = m
+	}
+	return m
+}
+
+type GridScores map[string]float64
+
+func (s *GridScores) init() GridScores {
+	m := *s
+	if m == nil {
+		m = map[string]float64{}
 		*s = m
 	}
 	return m
@@ -263,6 +345,123 @@ func (o NilCollectionMaybesItem) Get() (v CollectionMaybesItem, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilCollectionMaybesItem) Or(d CollectionMaybesItem) CollectionMaybesItem {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilGridAttachmentsItem returns new NilGridAttachmentsItem with value set to v.
+func NewNilGridAttachmentsItem(v GridAttachmentsItem) NilGridAttachmentsItem {
+	return NilGridAttachmentsItem{
+		Value: v,
+	}
+}
+
+// NilGridAttachmentsItem is nullable GridAttachmentsItem.
+type NilGridAttachmentsItem struct {
+	Value GridAttachmentsItem
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilGridAttachmentsItem) SetTo(v GridAttachmentsItem) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilGridAttachmentsItem) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilGridAttachmentsItem) SetToNull() {
+	o.Null = true
+	var v GridAttachmentsItem
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilGridAttachmentsItem) Get() (v GridAttachmentsItem, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilGridAttachmentsItem) Or(d GridAttachmentsItem) GridAttachmentsItem {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// Ref: #/components/schemas/NilStatus
+type NilStatus struct {
+	Code  int       `json:"code"`
+	Label OptString `json:"label"`
+}
+
+// GetCode returns the value of Code.
+func (s *NilStatus) GetCode() int {
+	return s.Code
+}
+
+// GetLabel returns the value of Label.
+func (s *NilStatus) GetLabel() OptString {
+	return s.Label
+}
+
+// SetCode sets the value of Code.
+func (s *NilStatus) SetCode(val int) {
+	s.Code = val
+}
+
+// SetLabel sets the value of Label.
+func (s *NilStatus) SetLabel(val OptString) {
+	s.Label = val
+}
+
+// NewOptBool returns new OptBool with value set to v.
+func NewOptBool(v bool) OptBool {
+	return OptBool{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptBool is optional bool.
+type OptBool struct {
+	Value bool
+	Set   bool
+}
+
+// IsSet returns true if OptBool was set.
+func (o OptBool) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptBool) Reset() {
+	var v bool
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptBool) SetTo(v bool) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptBool) Get() (v bool, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptBool) Or(d bool) bool {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -451,4 +650,113 @@ func (o OptString) Or(d string) string {
 		return v
 	}
 	return d
+}
+
+// NewOptURI returns new OptURI with value set to v.
+func NewOptURI(v url.URL) OptURI {
+	return OptURI{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptURI is optional url.URL.
+type OptURI struct {
+	Value url.URL
+	Set   bool
+}
+
+// IsSet returns true if OptURI was set.
+func (o OptURI) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptURI) Reset() {
+	var v url.URL
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptURI) SetTo(v url.URL) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptURI) Get() (v url.URL, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptURI) Or(d url.URL) url.URL {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// Ref: #/components/schemas/Options
+type Options struct {
+	Retries int     `json:"retries"`
+	Verbose OptBool `json:"verbose"`
+}
+
+// GetRetries returns the value of Retries.
+func (s *Options) GetRetries() int {
+	return s.Retries
+}
+
+// GetVerbose returns the value of Verbose.
+func (s *Options) GetVerbose() OptBool {
+	return s.Verbose
+}
+
+// SetRetries sets the value of Retries.
+func (s *Options) SetRetries(val int) {
+	s.Retries = val
+}
+
+// SetVerbose sets the value of Verbose.
+func (s *Options) SetVerbose(val OptBool) {
+	s.Verbose = val
+}
+
+// Ref: #/components/schemas/Record
+type Record struct {
+	ID        string    `json:"id"`
+	Options   Options   `json:"options"`
+	NilStatus NilStatus `json:"nilStatus"`
+}
+
+// GetID returns the value of ID.
+func (s *Record) GetID() string {
+	return s.ID
+}
+
+// GetOptions returns the value of Options.
+func (s *Record) GetOptions() Options {
+	return s.Options
+}
+
+// GetNilStatus returns the value of NilStatus.
+func (s *Record) GetNilStatus() NilStatus {
+	return s.NilStatus
+}
+
+// SetID sets the value of ID.
+func (s *Record) SetID(val string) {
+	s.ID = val
+}
+
+// SetOptions sets the value of Options.
+func (s *Record) SetOptions(val Options) {
+	s.Options = val
+}
+
+// SetNilStatus sets the value of NilStatus.
+func (s *Record) SetNilStatus(val NilStatus) {
+	s.NilStatus = val
 }

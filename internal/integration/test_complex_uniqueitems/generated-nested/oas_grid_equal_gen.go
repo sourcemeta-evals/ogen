@@ -54,6 +54,34 @@ func (a Grid) Equal(b Grid, depth int) bool {
 			}
 		}
 	}
+	// Compare map field: Scores
+	if len(a.Scores) != len(b.Scores) {
+		return false
+	}
+	for k, v := range a.Scores {
+		if bv, ok := b.Scores[k]; !ok || v != bv {
+			return false
+		}
+	}
+	// Compare map field: Attachments
+	if len(a.Attachments) != len(b.Attachments) {
+		return false
+	}
+	for k, v := range a.Attachments {
+		bv, ok := b.Attachments[k]
+		if !ok || !reflect.DeepEqual(v, bv) {
+			return false
+		}
+	}
+	// Compare optional field: Link
+	if a.Link.Set != b.Link.Set {
+		return false
+	}
+	if a.Link.Set {
+		if a.Link.Value.String() != b.Link.Value.String() {
+			return false
+		}
+	}
 	// Compare raw JSON field: Extra
 	if !validate.EqualRawJSON(a.Extra, b.Extra) {
 		return false

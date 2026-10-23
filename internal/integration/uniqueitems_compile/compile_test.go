@@ -86,9 +86,9 @@ func generateService(t *testing.T, specName string) string {
 	return dir
 }
 
-// generateStandaloneSchema generates a standalone type for a JSON Schema,
-// mirroring the jschemagen entrypoint.
-func generateStandaloneSchema(t *testing.T, schemaData string) string {
+// generateStandaloneSchema generates a standalone type for a JSON Schema
+// into the given package directory, mirroring the jschemagen entrypoint.
+func generateStandaloneSchema(t *testing.T, schemaData, dir, pkgName string) {
 	t.Helper()
 
 	var root yaml.Node
@@ -108,13 +108,11 @@ func generateStandaloneSchema(t *testing.T, schemaData string) string {
 	schema, err := parser.Parse(&rawSchema, jsonpointer.NewResolveCtx(rootURL, jsonpointer.DefaultDepthLimit))
 	require.NoError(t, err)
 
-	dir := outputDir(t)
 	require.NoError(t, gen.GenerateSchema(schema, genfs.FormattedSource{Root: dir}, gen.GenerateSchemaOptions{
 		TypeName: "UniqueEntries",
 		FileName: "unique_entries.gen.go",
-		PkgName:  "schemaout",
+		PkgName:  pkgName,
 	}))
-	return dir
 }
 
 func TestUniqueItemsGeneratedCodeCompiles(t *testing.T) {
@@ -133,6 +131,8 @@ func TestUniqueItemsGeneratedCodeCompiles(t *testing.T) {
 	})
 	t.Run("StandaloneSchema", func(t *testing.T) {
 		defer guard(t)
-		buildDir(t, generateStandaloneSchema(t, standaloneSchema))
+		dir := outputDir(t)
+		generateStandaloneSchema(t, standaloneSchema, dir, "schemaout")
+		buildDir(t, dir)
 	})
 }

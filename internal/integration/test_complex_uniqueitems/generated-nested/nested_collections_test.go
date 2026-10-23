@@ -366,3 +366,16 @@ func TestValidateUniqueCollection_BlobMatrix(t *testing.T) {
 	}}
 	requireDuplicateError(t, collection.Validate(), "identical binary payloads")
 }
+
+// The payload under a null wrapper is inactive, so wrappers that are both
+// null must compare equal even when stale payloads differ.
+func TestValidateUniqueCollection_MaybesInactivePayload(t *testing.T) {
+	first := NilCollectionMaybesItem{Null: true, Value: CollectionMaybesItem{ID: NewOptString("stale-a")}}
+	second := NilCollectionMaybesItem{Null: true, Value: CollectionMaybesItem{ID: NewOptString("stale-b")}}
+	collection := Collection{Maybes: []NilCollectionMaybesItem{first, second}}
+	requireDuplicateError(t, collection.Validate(), "both null with different stale payloads")
+
+	present := NewNilCollectionMaybesItem(CollectionMaybesItem{ID: NewOptString("stale-a")})
+	collection = Collection{Maybes: []NilCollectionMaybesItem{first, present}}
+	requireNoError(t, collection.Validate(), "null versus present value")
+}

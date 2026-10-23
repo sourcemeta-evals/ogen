@@ -370,6 +370,13 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName string) error {
 			return g.generateRawJSONEqualMethods(fs, pkgName)
 		})
 	}
+	// Generate state-aware Equal() methods for optional and nullable
+	// wrappers reachable from uniqueItems comparison
+	if len(g.wrapperTypes) > 0 {
+		grp.Go(func() error {
+			return g.generateWrapperEqualMethods(fs, pkgName)
+		})
+	}
 
 	return grp.Wait()
 }

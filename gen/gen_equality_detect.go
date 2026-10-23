@@ -38,6 +38,9 @@ func (g *Generator) collectEqualitySpecs() {
 	sort.Slice(g.rawJSONAliases, func(i, j int) bool {
 		return g.rawJSONAliases[i].Name < g.rawJSONAliases[j].Name
 	})
+	sort.Slice(g.wrapperTypes, func(i, j int) bool {
+		return g.wrapperTypes[i].Name < g.wrapperTypes[j].Name
+	})
 }
 
 // collectFromOperation walks every type reachable from an operation's
@@ -123,11 +126,12 @@ func (g *Generator) collectFromType(t *ir.Type, visited map[string]bool, rootVis
 	}
 }
 
-// collectRawJSONAliases records every named type whose underlying type is a
-// raw JSON value (an alias of a free-form schema) reachable from a
-// uniqueItems item. Each recorded alias gets a generated semantic Equal
-// method, which the reflect-based deep comparison dispatches to, keeping
-// named raw JSON semantic while named binary byte slices stay bytewise.
+// collectRawJSONAliases records every named type reachable from a
+// uniqueItems item that needs a generated semantic Equal method for the
+// reflect-based deep comparison to dispatch to: aliases of free-form
+// schemas, so named raw JSON stays semantic while named binary byte slices
+// stay bytewise, and generic optional or nullable wrappers, so the inactive
+// payload under an unset or null wrapper never influences equality.
 func (g *Generator) collectRawJSONAliases(t *ir.Type, visited map[*ir.Type]bool) {
 	if t == nil || visited[t] {
 		return
@@ -144,6 +148,18 @@ func (g *Generator) collectRawJSONAliases(t *ir.Type, visited map[*ir.Type]bool)
 		}
 		if !already {
 			g.rawJSONAliases = append(g.rawJSONAliases, t)
+		}
+	}
+	if t.Kind == ir.KindGeneric && t.Name != "" {
+		already := false
+		for _, existing := range g.wrapperTypes {
+			if existing.Name == t.Name {
+				already = true
+				break
+			}
+		}
+		if !already {
+			g.wrapperTypes = append(g.wrapperTypes, t)
 		}
 	}
 

@@ -1,0 +1,98 @@
+// Package runtimecheck asserts the semantics of generated uniqueness
+// validation through the public Validate method. The sibling generated code
+// is produced at grading time from the runtime schema in the parent
+// package's driver test.
+package runtimecheck
+
+import (
+	"testing"
+	"time"
+
+	"github.com/go-faster/jx"
+	"github.com/stretchr/testify/require"
+)
+
+func parseTime(t *testing.T, layout, value string) time.Time {
+	t.Helper()
+	parsed, err := time.Parse(layout, value)
+	require.NoError(t, err)
+	return parsed
+}
+
+func validateEntries(entries []Entry) error {
+	collection := UniqueEntries{Entries: entries}
+	return collection.Validate()
+}
+
+func TestGeneratedUniqueValidationSemantics(t *testing.T) {
+	t.Run("IdenticalRecordsAreDuplicates", func(t *testing.T) {
+		require.Error(t, validateEntries([]Entry{
+			{ID: "a", Name: "n"},
+			{ID: "a", Name: "n"},
+		}))
+	})
+	t.Run("DistinctRecordsPass", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n"},
+			{ID: "a", Name: "m"},
+		}))
+	})
+	t.Run("AbsentVersusEmptyPayloadStaysDistinct", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n"},
+			{ID: "a", Name: "n", Payload: []byte{}},
+		}))
+	})
+	t.Run("EqualPayloadsAreDuplicates", func(t *testing.T) {
+		require.Error(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Payload: []byte{0x01}},
+			{ID: "a", Name: "n", Payload: []byte{0x01}},
+		}))
+	})
+	t.Run("DifferentPayloadsStayDistinct", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Payload: []byte{0x01}},
+			{ID: "a", Name: "n", Payload: []byte{0x02}},
+		}))
+	})
+	t.Run("SeparatelyParsedTimestampsAreDuplicates", func(t *testing.T) {
+		// Each parse of a numeric zone offset allocates a new location, so
+		// comparisons through == or location identity miss this duplicate
+		require.Error(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339, "2024-01-02T03:04:05+01:23"))},
+			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339, "2024-01-02T03:04:05+01:23"))},
+		}))
+	})
+	t.Run("FractionalSecondsStayDistinct", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339, "2024-01-02T03:04:05+01:23"))},
+			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339Nano, "2024-01-02T03:04:05.5+01:23"))},
+		}))
+	})
+	t.Run("SameInstantDifferentOffsetStaysDistinct", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339, "2024-01-02T03:04:05+01:23"))},
+			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339, "2024-01-02T01:41:05Z"))},
+		}))
+	})
+	t.Run("EquivalentRawPayloadsAreDuplicates", func(t *testing.T) {
+		require.Error(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Extra: jx.Raw(`[null,1]`)},
+			{ID: "a", Name: "n", Extra: jx.Raw(`[ null, 1.0 ]`)},
+		}))
+	})
+	t.Run("DifferentRawPayloadsStayDistinct", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Extra: jx.Raw(`[null,1]`)},
+			{ID: "a", Name: "n", Extra: jx.Raw(`[null,2]`)},
+		}))
+	})
+	t.Run("RepeatedRawMembersAreOrderIndependent", func(t *testing.T) {
+		repeated := Entry{ID: "a", Name: "n", Extra: jx.Raw(`{"a":1,"a":1}`)}
+		single := Entry{ID: "a", Name: "n", Extra: jx.Raw(`{"a":1}`)}
+		forward := validateEntries([]Entry{repeated, single})
+		backward := validateEntries([]Entry{single, repeated})
+		require.Equal(t, forward == nil, backward == nil,
+			"verdict must not depend on operand order: forward=%v backward=%v", forward, backward)
+	})
+}

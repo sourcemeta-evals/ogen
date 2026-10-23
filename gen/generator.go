@@ -38,6 +38,7 @@ type Generator struct {
 	imports           map[string]string
 	equalitySpecs     []*ir.EqualityMethodSpec // Types requiring Equal() methods for uniqueItems validation
 	rawJSONAliases    []*ir.Type               // Named raw JSON types in uniqueItems items, needing semantic Equal() methods
+	wrapperTypes      []*ir.Type               // Generic wrapper types in uniqueItems items, needing state-aware Equal() methods
 
 	log *zap.Logger
 }

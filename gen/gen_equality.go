@@ -95,8 +95,15 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\t}\n")
 		case field.IsDecimal:
 			// decimal.Decimal contains a pointer, so == compares identity
-			fmt.Fprintf(b, "\t// Compare decimal field by value: %s\n", field.FieldName)
-			fmt.Fprintf(b, "\tif !a.%s.Equal(b.%s) {\n", field.FieldName, field.FieldName)
+			if field.IsStringDecimal {
+				// String-declared decimals keep their decoded scale: "1.0"
+				// and "1.00" are different strings and must stay distinct
+				fmt.Fprintf(b, "\t// Compare string decimal field by value and scale: %s\n", field.FieldName)
+				fmt.Fprintf(b, "\tif !a.%s.Equal(b.%s) || a.%s.Exponent() != b.%s.Exponent() {\n", field.FieldName, field.FieldName, field.FieldName, field.FieldName)
+			} else {
+				fmt.Fprintf(b, "\t// Compare decimal field by value: %s\n", field.FieldName)
+				fmt.Fprintf(b, "\tif !a.%s.Equal(b.%s) {\n", field.FieldName, field.FieldName)
+			}
 			fmt.Fprintf(b, "\t\treturn false\n")
 			fmt.Fprintf(b, "\t}\n")
 		case field.IsDeepOnly:
@@ -161,8 +168,13 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsDecimal:
-			// Optional wrapper around decimal.Decimal - compare by value
-			fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
+			// Optional wrapper around decimal.Decimal - compare by value,
+			// including the decoded scale for string-declared decimals
+			if field.IsStringDecimal {
+				fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) || a.%s.Value.Exponent() != b.%s.Value.Exponent() {\n", valueIndent, field.FieldName, field.FieldName, field.FieldName, field.FieldName)
+			} else {
+				fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
+			}
 			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsDeepOnly:
@@ -222,8 +234,13 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\t\t\treturn false\n")
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsDecimal:
-			// Nullable wrapper around decimal.Decimal - compare by value
-			fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) {\n", field.FieldName, field.FieldName)
+			// Nullable wrapper around decimal.Decimal - compare by value,
+			// including the decoded scale for string-declared decimals
+			if field.IsStringDecimal {
+				fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) || a.%s.Value.Exponent() != b.%s.Value.Exponent() {\n", field.FieldName, field.FieldName, field.FieldName, field.FieldName)
+			} else {
+				fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) {\n", field.FieldName, field.FieldName)
+			}
 			fmt.Fprintf(b, "\t\t\treturn false\n")
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsDeepOnly:
@@ -410,6 +427,8 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 			IsRawJSON:          field.IsRawJSON,
 			IsURL:              field.IsURL,
 			IsDecimal:          field.IsDecimal,
+			IsFloat:            field.IsFloat,
+			IsFloatArray:       field.IsFloatArray,
 			IsDeepOnly:         field.IsDeepOnly,
 			IsArrayOfRaw:       field.IsArrayOfRaw,
 			IsArrayOfDeep:      field.IsArrayOfDeep,
@@ -491,7 +510,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 		}
 		// Hash primitive field
 		fmt.Fprintf(b, "\t// Hash primitive field: %s\n", field.FieldName)
-		if isFloatGoType(field.GoType) {
+		if field.IsFloat || isFloatGoType(field.GoType) {
 			writeFloatHash(b, "\t", "v"+field.FieldName, "a."+field.FieldName)
 		} else {
 			fmt.Fprintf(b, "\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s)))\n", field.FieldName)
@@ -542,7 +561,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
 		case field.IsRawJSON, field.IsDeepOnly:
 			fmt.Fprintf(b, "\t\t// Pointee excluded from the hash: its equality ignores representation details\n")
-		case isFloatGoType(field.GoType):
+		case field.IsFloat || isFloatGoType(field.GoType):
 			writeFloatHash(b, "\t\t", "v"+field.FieldName, "*a."+field.FieldName)
 		default:
 			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", *a.%s)))\n", field.FieldName)
@@ -571,7 +590,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 			fmt.Fprintf(b, "\t\t\th.Write([]byte{1})\n")
 			if field.IsArrayOfStructs {
 				fmt.Fprintf(b, "\t\t\tbinary.Write(h, binary.LittleEndian, %s)\n", nestedHashCall("item.Value"))
-			} else if nullableWrapsFloat(elemGoType(field.GoType)) {
+			} else if field.IsFloatArray || nullableWrapsFloat(elemGoType(field.GoType)) {
 				writeFloatHash(b, "\t\t\t", "v", "item.Value")
 			} else {
 				fmt.Fprintf(b, "\t\t\th.Write([]byte(fmt.Sprintf(\"%%v\", item.Value)))\n")
@@ -580,7 +599,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 		case field.IsArrayOfStructs:
 			// Struct elements provide their own equality-consistent Hash()
 			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, %s)\n", nestedHashCall("item"))
-		case isFloatGoType(elemGoType(field.GoType)):
+		case field.IsFloatArray || isFloatGoType(elemGoType(field.GoType)):
 			writeFloatHash(b, "\t\t", "v", "item")
 		default:
 			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", item)))\n")
@@ -637,7 +656,7 @@ func (g *Generator) writeWrappedValueHash(b *strings.Builder, field ir.FieldHash
 		// nested wrapper payloads, signed zero, or raw JSON bytes. The
 		// presence markers already written keep the hash discriminating
 		fmt.Fprintf(b, "%s// Wrapped value excluded from the hash: only its presence participates\n", indent)
-	case isFloatGoType(field.GoType):
+	case field.IsFloat || isFloatGoType(field.GoType):
 		writeFloatHash(b, indent, "v"+field.FieldName, expr)
 	default:
 		fmt.Fprintf(b, "%sh.Write([]byte(fmt.Sprintf(\"%%v\", %s)))\n", indent, expr)
@@ -821,9 +840,12 @@ func (g *Generator) generateWrapperEqualMethods(fs FileSystem, pkgName string) e
 	fmt.Fprintf(&b, "\t\"github.com/ogen-go/ogen/validate\"\n")
 	fmt.Fprintf(&b, ")\n\n")
 	for _, wrapper := range g.wrapperTypes {
-		fmt.Fprintf(&b, "// Equal reports whether both wrapped values are equal, ignoring the\n")
-		fmt.Fprintf(&b, "// inactive payload under an unset or null wrapper.\n")
-		fmt.Fprintf(&b, "func (s %s) Equal(v %s) bool {\n", wrapper.Name, wrapper.Name)
+		fmt.Fprintf(&b, "// EqualDepth reports whether both wrapped values are equal, ignoring\n")
+		fmt.Fprintf(&b, "// the inactive payload under an unset or null wrapper. The depth\n")
+		fmt.Fprintf(&b, "// parameter continues the deep-comparison recursion budget, so cyclic\n")
+		fmt.Fprintf(&b, "// values surface as a depth limit error instead of exhausting the\n")
+		fmt.Fprintf(&b, "// stack by restarting the budget at every wrapper boundary.\n")
+		fmt.Fprintf(&b, "func (s %s) EqualDepth(v %s, depth int) bool {\n", wrapper.Name, wrapper.Name)
 		if wrapper.GenericVariant.Optional {
 			fmt.Fprintf(&b, "\tif s.Set != v.Set {\n")
 			fmt.Fprintf(&b, "\t\treturn false\n")
@@ -840,7 +862,7 @@ func (g *Generator) generateWrapperEqualMethods(fs FileSystem, pkgName string) e
 			fmt.Fprintf(&b, "\t\treturn true\n")
 			fmt.Fprintf(&b, "\t}\n")
 		}
-		fmt.Fprintf(&b, "\treturn validate.EqualDeep(s.Value, v.Value)\n")
+		fmt.Fprintf(&b, "\treturn validate.EqualDeepDepth(s.Value, v.Value, depth+1)\n")
 		fmt.Fprintf(&b, "}\n\n")
 	}
 

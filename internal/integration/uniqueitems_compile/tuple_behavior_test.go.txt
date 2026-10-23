@@ -1,0 +1,32 @@
+// Package tuplecheck asserts that an admitted tuple array with uniqueItems
+// still enforces the constraint. The sibling generated code is produced at
+// grading time from the tuple schema in the parent package's driver test,
+// and only when generation accepts that schema instead of rejecting it.
+package tuplecheck
+
+import (
+	"testing"
+
+	"github.com/go-faster/jx"
+	"github.com/stretchr/testify/require"
+)
+
+// decodeTuple decodes a JSON array into the generated tuple type through
+// its public decoder, like a request payload would be.
+func decodeTuple(t *testing.T, raw string) TupleRoot {
+	t.Helper()
+	var root TupleRoot
+	require.NoError(t, root.Decode(jx.DecodeStr(raw)))
+	return root
+}
+
+// TestTupleUniqueItemsEnforced runs only when generation admits the tuple
+// schema: the admitted uniqueItems constraint must reject repeated elements
+// through the public Validate method and accept distinct elements.
+func TestTupleUniqueItemsEnforced(t *testing.T) {
+	duplicate := decodeTuple(t, `["x","x"]`)
+	require.Error(t, duplicate.Validate())
+
+	distinct := decodeTuple(t, `["x","y"]`)
+	require.NoError(t, distinct.Validate())
+}

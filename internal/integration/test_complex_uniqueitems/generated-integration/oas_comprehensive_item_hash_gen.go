@@ -70,6 +70,24 @@ func (a ComprehensiveItem) Hash(depth int) uint64 {
 	}
 	// Hash primitive field: Payload
 	h.Write([]byte(fmt.Sprintf("%v", a.Payload)))
+	// Hash optional field: Amount
+	if a.Amount.Set {
+		h.Write([]byte{1})
+		// Wrapped decimal excluded from the hash: equal decimals can format differently
+	} else {
+		h.Write([]byte{0})
+	}
+	// Hash optional field: Rating
+	if a.Rating.Set {
+		h.Write([]byte{1})
+		vRating := a.Rating.Value
+		if vRating == 0 {
+			vRating = 0
+		}
+		h.Write([]byte(fmt.Sprintf("%v", vRating)))
+	} else {
+		h.Write([]byte{0})
+	}
 	// Hash optional field: Status
 	if a.Status.Set {
 		h.Write([]byte{1})

@@ -67,6 +67,18 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 		e.Base64(s.Payload)
 	}
 	{
+		if s.Amount.Set {
+			e.FieldStart("amount")
+			s.Amount.Encode(e)
+		}
+	}
+	{
+		if s.Rating.Set {
+			e.FieldStart("rating")
+			s.Rating.Encode(e)
+		}
+	}
+	{
 		if s.Status.Set {
 			e.FieldStart("status")
 			s.Status.Encode(e)
@@ -140,7 +152,7 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfComprehensiveItem = [19]string{
+var jsonFieldsNameOfComprehensiveItem = [21]string{
 	0:  "id",
 	1:  "name",
 	2:  "priority",
@@ -150,16 +162,18 @@ var jsonFieldsNameOfComprehensiveItem = [19]string{
 	6:  "externalId",
 	7:  "createdAt",
 	8:  "payload",
-	9:  "status",
-	10: "category",
-	11: "tags",
-	12: "labels",
-	13: "metadata",
-	14: "customFields",
-	15: "owner",
-	16: "assignee",
-	17: "watchers",
-	18: "configuration",
+	9:  "amount",
+	10: "rating",
+	11: "status",
+	12: "category",
+	13: "tags",
+	14: "labels",
+	15: "metadata",
+	16: "customFields",
+	17: "owner",
+	18: "assignee",
+	19: "watchers",
+	20: "configuration",
 }
 
 // Decode decodes ComprehensiveItem from json.
@@ -269,6 +283,26 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"payload\"")
+			}
+		case "amount":
+			if err := func() error {
+				s.Amount.Reset()
+				if err := s.Amount.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"amount\"")
+			}
+		case "rating":
+			if err := func() error {
+				s.Rating.Reset()
+				if err := s.Rating.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rating\"")
 			}
 		case "status":
 			if err := func() error {
@@ -1561,6 +1595,39 @@ func (s *OptNilString) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes Rating as json.
+func (o OptRating) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes Rating from json.
+func (o *OptRating) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptRating to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptRating) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptRating) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes string as json.
 func (o OptString) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -1596,6 +1663,41 @@ func (s *OptString) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes decimal.Decimal as json.
+func (o OptStringDecimal) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	json.EncodeStringDecimal(e, o.Value)
+}
+
+// Decode decodes decimal.Decimal from json.
+func (o *OptStringDecimal) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptStringDecimal to nil")
+	}
+	o.Set = true
+	v, err := json.DecodeStringDecimal(d)
+	if err != nil {
+		return err
+	}
+	o.Value = v
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptStringDecimal) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptStringDecimal) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes User as json.
 func (o OptUser) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -1625,6 +1727,46 @@ func (s OptUser) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptUser) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes Rating as json.
+func (s Rating) Encode(e *jx.Encoder) {
+	unwrapped := float64(s)
+
+	e.Float64(unwrapped)
+}
+
+// Decode decodes Rating from json.
+func (s *Rating) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode Rating to nil")
+	}
+	var unwrapped float64
+	if err := func() error {
+		v, err := d.Float64()
+		unwrapped = float64(v)
+		if err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = Rating(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s Rating) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *Rating) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
+	"github.com/shopspring/decimal"
 )
 
 // Item with all field type categories.
@@ -29,6 +30,10 @@ type ComprehensiveItem struct {
 	CreatedAt OptDateTime `json:"createdAt"`
 	// Optional binary payload.
 	Payload []byte `json:"payload"`
+	// Optional decimal amount kept as a string.
+	Amount OptStringDecimal `json:"amount"`
+	// Optional rating.
+	Rating OptRating `json:"rating"`
 	// Item status.
 	Status OptComprehensiveItemStatus `json:"status"`
 	// Optional category.
@@ -94,6 +99,16 @@ func (s *ComprehensiveItem) GetCreatedAt() OptDateTime {
 // GetPayload returns the value of Payload.
 func (s *ComprehensiveItem) GetPayload() []byte {
 	return s.Payload
+}
+
+// GetAmount returns the value of Amount.
+func (s *ComprehensiveItem) GetAmount() OptStringDecimal {
+	return s.Amount
+}
+
+// GetRating returns the value of Rating.
+func (s *ComprehensiveItem) GetRating() OptRating {
+	return s.Rating
 }
 
 // GetStatus returns the value of Status.
@@ -189,6 +204,16 @@ func (s *ComprehensiveItem) SetCreatedAt(val OptDateTime) {
 // SetPayload sets the value of Payload.
 func (s *ComprehensiveItem) SetPayload(val []byte) {
 	s.Payload = val
+}
+
+// SetAmount sets the value of Amount.
+func (s *ComprehensiveItem) SetAmount(val OptStringDecimal) {
+	s.Amount = val
+}
+
+// SetRating sets the value of Rating.
+func (s *ComprehensiveItem) SetRating(val OptRating) {
+	s.Rating = val
 }
 
 // SetStatus sets the value of Status.
@@ -1058,6 +1083,52 @@ func (o OptNilString) Or(d string) string {
 	return d
 }
 
+// NewOptRating returns new OptRating with value set to v.
+func NewOptRating(v Rating) OptRating {
+	return OptRating{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRating is optional Rating.
+type OptRating struct {
+	Value Rating
+	Set   bool
+}
+
+// IsSet returns true if OptRating was set.
+func (o OptRating) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRating) Reset() {
+	var v Rating
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRating) SetTo(v Rating) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRating) Get() (v Rating, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRating) Or(d Rating) Rating {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -1098,6 +1169,52 @@ func (o OptString) Get() (v string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptStringDecimal returns new OptStringDecimal with value set to v.
+func NewOptStringDecimal(v decimal.Decimal) OptStringDecimal {
+	return OptStringDecimal{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStringDecimal is optional decimal.Decimal.
+type OptStringDecimal struct {
+	Value decimal.Decimal
+	Set   bool
+}
+
+// IsSet returns true if OptStringDecimal was set.
+func (o OptStringDecimal) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStringDecimal) Reset() {
+	var v decimal.Decimal
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStringDecimal) SetTo(v decimal.Decimal) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStringDecimal) Get() (v decimal.Decimal, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStringDecimal) Or(d decimal.Decimal) decimal.Decimal {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -1149,6 +1266,8 @@ func (o OptUser) Or(d User) User {
 	}
 	return d
 }
+
+type Rating float64
 
 // User information.
 // Ref: #/components/schemas/User

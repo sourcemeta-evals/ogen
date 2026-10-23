@@ -94,6 +94,18 @@ components:
           format: byte
           description: Optional binary payload
 
+        # String-declared decimal, where the decoded scale is part of the
+        # value: "1.0" and "1.00" are different strings
+        amount:
+          type: string
+          format: decimal
+          description: Optional decimal amount kept as a string
+
+        # Referenced number schema, generated as a named float alias
+        rating:
+          $ref: '#/components/schemas/Rating'
+          description: Optional rating
+
         # Enum field
         status:
           type: string
@@ -155,6 +167,10 @@ components:
         configuration:
           $ref: '#/components/schemas/Configuration'
           description: Item configuration
+
+    Rating:
+      type: number
+      description: Rating value referenced as a named scalar
 
     User:
       type: object

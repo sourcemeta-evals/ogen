@@ -6,38 +6,47 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptBool) Equal(v OptBool) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptBool) EqualDepth(v OptBool, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptString) Equal(v OptString) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptString) EqualDepth(v OptString, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptWorkflowTransitionRuleConfiguration) Equal(v OptWorkflowTransitionRuleConfiguration) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptWorkflowTransitionRuleConfiguration) EqualDepth(v OptWorkflowTransitionRuleConfiguration, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }

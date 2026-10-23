@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/ogen-go/ogen/validate"
 )
 
@@ -326,6 +328,68 @@ func TestValidateUniqueComprehensiveItem_NegativeZeroScore(t *testing.T) {
 	err := validateUniqueComprehensiveItem(items)
 	if err == nil {
 		t.Error("Expected duplicate error for items differing only in zero sign")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+}
+
+// String-declared decimals keep their decoded scale: "1.0" and "1.00" are
+// different JSON strings, so they must stay distinct even though they are
+// numerically equal
+func TestValidateUniqueComprehensiveItem_StringDecimalScale(t *testing.T) {
+	base := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	oneDigitScale := base
+	oneDigitScale.Amount = NewOptStringDecimal(decimal.RequireFromString("1.0"))
+	twoDigitScale := base
+	twoDigitScale.Amount = NewOptStringDecimal(decimal.RequireFromString("1.00"))
+
+	err := validateUniqueComprehensiveItem([]ComprehensiveItem{oneDigitScale, twoDigitScale})
+	if err != nil {
+		t.Errorf("Expected decimal strings with different scales to stay distinct, got: %v", err)
+	}
+
+	duplicate := base
+	duplicate.Amount = NewOptStringDecimal(decimal.RequireFromString("1.0"))
+	err = validateUniqueComprehensiveItem([]ComprehensiveItem{oneDigitScale, duplicate})
+	if err == nil {
+		t.Error("Expected duplicate error for identical decimal strings")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+}
+
+// Referenced number schemas generate named float aliases, whose negative
+// zero must hash like positive zero, or equal items land in different
+// buckets and the duplicate escapes detection
+func TestValidateUniqueComprehensiveItem_NegativeZeroRating(t *testing.T) {
+	itemWithPositiveZero := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Rating:   NewOptRating(0),
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	itemWithNegativeZero := itemWithPositiveZero
+	itemWithNegativeZero.Rating = NewOptRating(Rating(math.Copysign(0, -1)))
+
+	err := validateUniqueComprehensiveItem([]ComprehensiveItem{itemWithPositiveZero, itemWithNegativeZero})
+	if err == nil {
+		t.Error("Expected duplicate error for items differing only in the rating zero sign")
 	}
 	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
 		t.Errorf("Expected DuplicateItemsError, got: %T", err)

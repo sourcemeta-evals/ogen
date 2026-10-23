@@ -6,134 +6,167 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptBool) Equal(v OptBool) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptBool) EqualDepth(v OptBool, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptCondition) Equal(v OptCondition) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptCondition) EqualDepth(v OptCondition, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptConditionGroup) Equal(v OptConditionGroup) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptConditionGroup) EqualDepth(v OptConditionGroup, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptConditionGroupOperator) Equal(v OptConditionGroupOperator) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptConditionGroupOperator) EqualDepth(v OptConditionGroupOperator, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptFloat64) Equal(v OptFloat64) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptFloat64) EqualDepth(v OptFloat64, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptParameter) Equal(v OptParameter) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptParameter) EqualDepth(v OptParameter, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptParameterGroup) Equal(v OptParameterGroup) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptParameterGroup) EqualDepth(v OptParameterGroup, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptParameterValue) Equal(v OptParameterValue) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptParameterValue) EqualDepth(v OptParameterValue, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptParameterValueMetadata) Equal(v OptParameterValueMetadata) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptParameterValueMetadata) EqualDepth(v OptParameterValueMetadata, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptRuleConfiguration) Equal(v OptRuleConfiguration) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptRuleConfiguration) EqualDepth(v OptRuleConfiguration, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }
 
-// Equal reports whether both wrapped values are equal, ignoring the
-// inactive payload under an unset or null wrapper.
-func (s OptString) Equal(v OptString) bool {
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
+func (s OptString) EqualDepth(v OptString, depth int) bool {
 	if s.Set != v.Set {
 		return false
 	}
 	if !s.Set {
 		return true
 	}
-	return validate.EqualDeep(s.Value, v.Value)
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
 }

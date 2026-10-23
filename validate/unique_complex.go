@@ -46,18 +46,29 @@ func UniqueItemsDeep[S ~[]T, T any](arr S) (err error) {
 //
 // It matches reflect.DeepEqual, including the distinction between nil and
 // empty slices and maps, except that jx.Raw values compare through
-// EqualRawJSON, time.Time values compare through EqualTime, and types with
-// an Equal method of the form Equal(T) bool delegate to it, so generated
-// struct items, generated raw JSON aliases and decimal values compare by
-// value. Named byte-slice types without an Equal method stay bytewise,
-// because they carry decoded binary data, not JSON.
+// EqualRawJSON, time.Time values compare through EqualTime, types with an
+// EqualDepth(T, depth int) bool method delegate to it with the current
+// depth, and types with an Equal method of the form Equal(T) bool delegate
+// to that, so generated wrappers, generated raw JSON aliases and decimal
+// values compare by value. Named byte-slice types without an Equal method
+// stay bytewise, because they carry decoded binary data, not JSON.
 //
 // Comparison depth is bounded: beyond equalDeepMaxDepth levels, such as on
 // cyclic values, EqualDeep panics with a DepthLimitError, which
 // UniqueItemsDeep and the generated uniqueness validators recover into a
-// returned error.
+// returned error. Generated wrapper EqualDepth methods receive the current
+// depth and forward it back through EqualDeepDepth, so one budget spans the
+// whole comparison instead of restarting at every wrapper boundary.
 func EqualDeep[T any](a, b T) bool {
 	return equalDeepValue(reflect.ValueOf(a), reflect.ValueOf(b), 0)
+}
+
+// EqualDeepDepth continues a deep comparison at the given recursion depth.
+// Generated EqualDepth methods call it with the depth they received, so one
+// recursion budget spans the whole comparison and cyclic values cannot
+// bypass the limit by resetting it at each wrapper boundary.
+func EqualDeepDepth[T any](a, b T, depth int) bool {
+	return equalDeepValue(reflect.ValueOf(a), reflect.ValueOf(b), depth)
 }
 
 // equalDeepMaxDepth bounds recursion in equalDeepValue, so cyclic values
@@ -68,6 +79,7 @@ var (
 	rawJSONReflectType = reflect.TypeOf(jx.Raw(nil))
 	timeReflectType    = reflect.TypeOf(time.Time{})
 	boolReflectType    = reflect.TypeOf(false)
+	intReflectType     = reflect.TypeOf(0)
 )
 
 func equalDeepValue(a, b reflect.Value, depth int) bool {
@@ -89,6 +101,15 @@ func equalDeepValue(a, b reflect.Value, depth int) bool {
 	}
 	if t == timeReflectType {
 		return EqualTime(a.Interface().(time.Time), b.Interface().(time.Time))
+	}
+	// Generated wrapper methods continue the shared recursion budget, so
+	// cyclic values cannot bypass the depth limit by restarting it at every
+	// wrapper boundary
+	if method, ok := t.MethodByName("EqualDepth"); ok &&
+		method.Type.NumIn() == 3 && method.Type.In(1) == t &&
+		method.Type.In(2) == intReflectType &&
+		method.Type.NumOut() == 1 && method.Type.Out(0) == boolReflectType {
+		return method.Func.Call([]reflect.Value{a, b, reflect.ValueOf(depth + 1)})[0].Bool()
 	}
 	if method, ok := t.MethodByName("Equal"); ok &&
 		method.Type.NumIn() == 2 && method.Type.In(1) == t &&

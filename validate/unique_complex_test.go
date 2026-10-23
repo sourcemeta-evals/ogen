@@ -123,6 +123,23 @@ func TestUniqueItemsDeep(t *testing.T) {
 		err = UniqueItemsDeep([]*node{cycle("a"), cycle("b")})
 		require.NoError(t, err)
 	})
+	t.Run("CyclesThroughWrapperMethodsSurfaceAnError", func(t *testing.T) {
+		cycle := func() nilWrapperValue {
+			values := map[string]nilWrapperValue{}
+			wrapper := nilWrapperValue{Value: values}
+			values["self"] = wrapper
+			return wrapper
+		}
+		// Every pass through the wrapper method re-enters the deep
+		// comparison, so a restarted budget would never run out and the
+		// stack would be exhausted instead of reporting the depth limit
+		err := UniqueItemsDeep([]nilWrapperValue{cycle(), cycle()})
+		var depthErr *DepthLimitError
+		require.ErrorAs(t, err, &depthErr)
+
+		err = UniqueItemsDeep([]nilWrapperValue{cycle(), {Null: true}})
+		require.NoError(t, err)
+	})
 	t.Run("DepthBeyondBudgetSurfacesAnError", func(t *testing.T) {
 		type chain struct {
 			Next *chain
@@ -214,6 +231,24 @@ func (a equalMethodValue) Equal(b equalMethodValue) bool {
 	return a.ID == b.ID && EqualRawJSON(a.Extra, b.Extra)
 }
 
+// nilWrapperValue mirrors a generated nullable wrapper: EqualDepth receives
+// the current comparison depth and forwards it through EqualDeepDepth, so
+// the recursion budget is not restarted at the wrapper boundary.
+type nilWrapperValue struct {
+	Value map[string]nilWrapperValue
+	Null  bool
+}
+
+func (s nilWrapperValue) EqualDepth(v nilWrapperValue, depth int) bool {
+	if s.Null != v.Null {
+		return false
+	}
+	if s.Null {
+		return true
+	}
+	return EqualDeepDepth(s.Value, v.Value, depth+1)
+}
+
 func TestEqualDeep(t *testing.T) {
 	t.Run("NestedRawArrays", func(t *testing.T) {
 		require.True(t, EqualDeep(
@@ -288,6 +323,21 @@ func TestEqualDeep(t *testing.T) {
 		require.True(t, EqualDeep(
 			[][]byte{[]byte{0x01, 0x02}},
 			[][]byte{[]byte{0x01, 0x02}},
+		))
+	})
+	t.Run("WrapperDepthMethodDispatch", func(t *testing.T) {
+		stale := func(label string) map[string]nilWrapperValue {
+			return map[string]nilWrapperValue{label: {Null: true}}
+		}
+		// Null wrappers compare equal by state, whatever stale payload the
+		// inactive Value holds
+		require.True(t, EqualDeep(
+			nilWrapperValue{Null: true, Value: stale("a")},
+			nilWrapperValue{Null: true, Value: stale("b")},
+		))
+		require.False(t, EqualDeep(
+			nilWrapperValue{Null: true},
+			nilWrapperValue{Value: stale("a")},
 		))
 	})
 	t.Run("EqualMethodDispatch", func(t *testing.T) {

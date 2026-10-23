@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/ogen-go/ogen/gen/ir"
+	"github.com/ogen-go/ogen/jsonschema"
 )
 
 const (
@@ -427,6 +428,18 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				}
 			}
 
+			// Array elements that are floats, directly or inside nullable
+			// element wrappers, resolved from the IR for named types
+			isFloatArray := false
+			if elemArray.Kind == ir.KindArray && elemArray.Item != nil {
+				elem := elemArray.Item
+				if resolvesToFloat(elem) {
+					isFloatArray = true
+				} else if elem.Kind == ir.KindGeneric && resolvesToFloat(unwrapOptional(elem)) {
+					isFloatArray = true
+				}
+			}
+
 			isMapOfRaw := false
 			isMapOfDeep := false
 			if mapType.Kind == ir.KindMap && mapType.Item != nil && !isMapOfStructs {
@@ -453,6 +466,21 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				case ir.Decimal:
 					isDecimal = true
 				}
+			}
+
+			// A decimal declared as a JSON string keeps its decoded scale:
+			// "1.0" and "1.00" are different strings, so numerically equal
+			// decimals with different exponents must stay distinct
+			isStringDecimal := isDecimal &&
+				scalarType.Schema != nil && scalarType.Schema.Type == jsonschema.String
+
+			// Floating point values format negative zero differently from
+			// positive zero, so hashing must normalize them. Named scalar
+			// types render their alias name, not float32/float64, in the Go
+			// representation, so float-ness is resolved from the IR
+			isFloat := resolvesToFloat(scalarType)
+			if !isFloat && field.Type.Kind == ir.KindPointer {
+				isFloat = resolvesToFloat(field.Type.PointerTo)
 			}
 
 			// Field values with no == operator, no generated Equal method
@@ -498,6 +526,9 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				IsRawJSON:              isRawJSON,
 				IsURL:                  isURL,
 				IsDecimal:              isDecimal,
+				IsStringDecimal:        isStringDecimal,
+				IsFloat:                isFloat,
+				IsFloatArray:           isFloatArray,
 				IsDeepOnly:             isDeepOnly,
 				IsOptionalNullable:     isOptionalNullable(field.Type),
 			}
@@ -519,6 +550,19 @@ func hasNestedObjects(t *ir.Type) bool {
 	// All struct types get depth tracking for consistent Equal() signatures
 	// This simplifies code generation and calling conventions
 	return t.Kind == ir.KindStruct
+}
+
+// resolvesToFloat reports whether a type is a floating point number once
+// alias chains are resolved, so named scalar types such as a referenced
+// number schema normalize negative zero like plain float fields do.
+func resolvesToFloat(t *ir.Type) bool {
+	for t != nil && t.Kind == ir.KindAlias {
+		t = t.AliasTo
+	}
+	if t == nil || t.Kind != ir.KindPrimitive {
+		return false
+	}
+	return t.Primitive == ir.Float32 || t.Primitive == ir.Float64
 }
 
 // unwrapOptional unwraps Generic optional/nullable types to get the underlying type.

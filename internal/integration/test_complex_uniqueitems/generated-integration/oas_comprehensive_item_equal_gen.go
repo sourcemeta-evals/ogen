@@ -78,6 +78,24 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 	if !bytes.Equal(a.Payload, b.Payload) {
 		return false
 	}
+	// Compare optional field: Amount
+	if a.Amount.Set != b.Amount.Set {
+		return false
+	}
+	if a.Amount.Set {
+		if !a.Amount.Value.Equal(b.Amount.Value) || a.Amount.Value.Exponent() != b.Amount.Value.Exponent() {
+			return false
+		}
+	}
+	// Compare optional field: Rating
+	if a.Rating.Set != b.Rating.Set {
+		return false
+	}
+	if a.Rating.Set {
+		if a.Rating.Value != b.Rating.Value {
+			return false
+		}
+	}
 	// Compare optional field: Status
 	if a.Status.Set != b.Status.Set {
 		return false

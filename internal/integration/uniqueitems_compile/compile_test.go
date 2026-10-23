@@ -86,9 +86,11 @@ func generateService(t *testing.T, specName string) string {
 	return dir
 }
 
-// generateStandaloneSchema generates a standalone type for a JSON Schema
-// into the given package directory, mirroring the jschemagen entrypoint.
-func generateStandaloneSchema(t *testing.T, schemaData, dir, pkgName string) {
+// buildStandaloneSchema generates a standalone type for a JSON Schema into
+// the given package directory, mirroring the jschemagen entrypoint. Schema
+// parsing and generation errors are returned instead of failing the test,
+// so callers can accept an explicit rejection of an unsupported feature.
+func buildStandaloneSchema(t *testing.T, schemaData, dir, pkgName, typeName, fileName string) error {
 	t.Helper()
 
 	var root yaml.Node
@@ -106,13 +108,22 @@ func generateStandaloneSchema(t *testing.T, schemaData, dir, pkgName string) {
 	require.NoError(t, err)
 
 	schema, err := parser.Parse(&rawSchema, jsonpointer.NewResolveCtx(rootURL, jsonpointer.DefaultDepthLimit))
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
-	require.NoError(t, gen.GenerateSchema(schema, genfs.FormattedSource{Root: dir}, gen.GenerateSchemaOptions{
-		TypeName: "UniqueEntries",
-		FileName: "unique_entries.gen.go",
+	return gen.GenerateSchema(schema, genfs.FormattedSource{Root: dir}, gen.GenerateSchemaOptions{
+		TypeName: typeName,
+		FileName: fileName,
 		PkgName:  pkgName,
-	}))
+	})
+}
+
+// generateStandaloneSchema generates a standalone type for a JSON Schema
+// into the given package directory and fails the test on any error.
+func generateStandaloneSchema(t *testing.T, schemaData, dir, pkgName string) {
+	t.Helper()
+	require.NoError(t, buildStandaloneSchema(t, schemaData, dir, pkgName, "UniqueEntries", "unique_entries.gen.go"))
 }
 
 func TestUniqueItemsGeneratedCodeCompiles(t *testing.T) {

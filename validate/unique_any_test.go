@@ -66,6 +66,23 @@ func TestUniqueItemsAny(t *testing.T) {
 			{Values: []string{}},
 		}))
 	})
+	t.Run("NamedRawTypeReorderedMembers", func(t *testing.T) {
+		// Referenced free-form schemas generate named jx.Raw aliases, which
+		// must compare as JSON values like jx.Raw itself
+		type namedRaw jx.Raw
+		type holder struct {
+			ID    int
+			Extra namedRaw
+		}
+		require.Error(t, UniqueItemsAny([]holder{
+			{ID: 1, Extra: namedRaw(`{"a":1,"b":2}`)},
+			{ID: 1, Extra: namedRaw(`{ "b":2, "a":1 }`)},
+		}))
+		require.NoError(t, UniqueItemsAny([]holder{
+			{ID: 1, Extra: namedRaw(`{"a":1}`)},
+			{ID: 1, Extra: namedRaw(`{"a":2}`)},
+		}))
+	})
 	t.Run("NumberBeyondExactComparison", func(t *testing.T) {
 		err := UniqueItemsAny([]thing{
 			{ID: 1, Extra: jx.Raw(`1e99999999999999999999`)},

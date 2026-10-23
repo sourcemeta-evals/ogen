@@ -14,7 +14,24 @@ import (
 // declared type. Comparing those byte slices directly would make equality
 // depend on member order, whitespace and escaping, so deepEqualAny compares
 // them as JSON values instead.
-var jsonRawType = reflect.TypeOf(jx.Raw(nil))
+var (
+	jsonRawType   = reflect.TypeOf(jx.Raw(nil))
+	byteSliceType = reflect.TypeOf([]byte(nil))
+)
+
+// isJSONRawType reports whether a reflect type holds raw JSON bytes: jx.Raw
+// itself, or a defined byte-slice type such as a generated alias of a
+// referenced free-form schema. Plain []byte stays bytewise, because it
+// carries decoded binary data, not JSON.
+func isJSONRawType(t reflect.Type) bool {
+	if t == jsonRawType {
+		return true
+	}
+	return t != byteSliceType &&
+		t.Kind() == reflect.Slice &&
+		t.Elem().Kind() == reflect.Uint8 &&
+		t.ConvertibleTo(jsonRawType)
+}
 
 // errExactNumber reports a raw JSON number the comparison cannot represent
 // exactly. Returning an error is preferable to silently treating equivalent
@@ -34,7 +51,7 @@ func deepEqualValue(a, b reflect.Value) (bool, error) {
 	if a.Type() != b.Type() {
 		return false, nil
 	}
-	if a.Type() == jsonRawType {
+	if isJSONRawType(a.Type()) {
 		return equalJSONRaw(a.Bytes(), b.Bytes())
 	}
 	switch a.Kind() {

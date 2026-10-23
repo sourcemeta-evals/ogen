@@ -29,7 +29,7 @@ func validateUniqueLevel1(items []Level1) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -69,7 +69,7 @@ func validateUniqueLevel10(items []Level10) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -109,7 +109,7 @@ func validateUniqueLevel11(items []Level11) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -149,7 +149,7 @@ func validateUniqueLevel12(items []Level12) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -189,7 +189,7 @@ func validateUniqueLevel2(items []Level2) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -229,7 +229,7 @@ func validateUniqueLevel3(items []Level3) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -269,7 +269,7 @@ func validateUniqueLevel4(items []Level4) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -309,7 +309,7 @@ func validateUniqueLevel5(items []Level5) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -349,7 +349,7 @@ func validateUniqueLevel6(items []Level6) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -389,7 +389,7 @@ func validateUniqueLevel7(items []Level7) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -429,7 +429,7 @@ func validateUniqueLevel8(items []Level8) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -469,7 +469,7 @@ func validateUniqueLevel9(items []Level9) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {

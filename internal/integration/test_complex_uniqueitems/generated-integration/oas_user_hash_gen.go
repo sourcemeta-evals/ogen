@@ -5,11 +5,21 @@ package api
 import (
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for User using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a User) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a User) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "User",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash primitive field: Username

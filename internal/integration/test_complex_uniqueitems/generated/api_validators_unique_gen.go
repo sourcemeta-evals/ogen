@@ -29,7 +29,7 @@ func validateUniqueStatusProperties(items []StatusProperties) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -69,7 +69,7 @@ func validateUniqueWorkflowStatus(items []WorkflowStatus) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {

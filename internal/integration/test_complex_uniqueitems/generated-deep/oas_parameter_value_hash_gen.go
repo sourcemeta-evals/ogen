@@ -5,11 +5,21 @@ package api
 import (
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for ParameterValue using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a ParameterValue) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a ParameterValue) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "ParameterValue",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash optional field: StringValue
@@ -40,7 +50,7 @@ func (a ParameterValue) Hash() uint64 {
 	// Hash optional field: Metadata
 	if a.Metadata.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.Metadata.Value)))
+		// Wrapped value excluded from the hash: only its presence participates
 	} else {
 		h.Write([]byte{0})
 	}

@@ -15,10 +15,19 @@ const (
 // collectEqualitySpecs identifies types that require Equal() and Hash() methods
 // for complex uniqueItems validation.
 func (g *Generator) collectEqualitySpecs() {
-	// Iterate through all types to find arrays with complex uniqueItems
+	// Iterate through all types to find arrays with complex uniqueItems.
+	// Operation and webhook payloads are walked as additional roots because
+	// anonymous request or response arrays are not stored as named types.
 	visited := make(map[string]bool)
+	rootVisited := make(map[*ir.Type]bool)
 	for _, t := range g.tstorage.types {
-		g.collectFromType(t, visited)
+		g.collectFromType(t, visited, rootVisited)
+	}
+	for _, op := range g.operations {
+		g.collectFromOperation(op, visited, rootVisited)
+	}
+	for _, op := range g.webhooks {
+		g.collectFromOperation(op, visited, rootVisited)
 	}
 
 	// Map iteration order is random, so sort by type name to keep the
@@ -28,11 +37,51 @@ func (g *Generator) collectEqualitySpecs() {
 	})
 }
 
-// collectFromType recursively checks a type and its fields for uniqueItems arrays
-func (g *Generator) collectFromType(t *ir.Type, visited map[string]bool) {
-	if t == nil {
+// collectFromOperation walks every type reachable from an operation's
+// parameters, request and responses for uniqueItems arrays.
+func (g *Generator) collectFromOperation(op *ir.Operation, visited map[string]bool, rootVisited map[*ir.Type]bool) {
+	if op == nil {
 		return
 	}
+	for _, param := range op.Params {
+		if param != nil {
+			g.collectFromType(param.Type, visited, rootVisited)
+		}
+	}
+	if req := op.Request; req != nil {
+		g.collectFromType(req.Type, visited, rootVisited)
+		for _, media := range req.Contents {
+			g.collectFromType(media.Type, visited, rootVisited)
+		}
+	}
+	if resp := op.Responses; resp != nil {
+		g.collectFromType(resp.Type, visited, rootVisited)
+		collectResponse := func(r *ir.Response) {
+			if r == nil {
+				return
+			}
+			g.collectFromType(r.NoContent, visited, rootVisited)
+			for _, media := range r.Contents {
+				g.collectFromType(media.Type, visited, rootVisited)
+			}
+		}
+		for _, r := range resp.StatusCode {
+			collectResponse(r)
+		}
+		for _, r := range resp.Pattern {
+			collectResponse(r)
+		}
+		collectResponse(resp.Default)
+	}
+}
+
+// collectFromType recursively checks a type and everything reachable from it
+// for uniqueItems arrays
+func (g *Generator) collectFromType(t *ir.Type, visited map[string]bool, rootVisited map[*ir.Type]bool) {
+	if t == nil || rootVisited[t] {
+		return
+	}
+	rootVisited[t] = true
 
 	// Check if this is an array with unique items
 	if t.Kind == ir.KindArray && t.Schema != nil && t.Schema.UniqueItems {
@@ -47,18 +96,23 @@ func (g *Generator) collectFromType(t *ir.Type, visited map[string]bool) {
 		}
 	}
 
-	// Recursively check fields of structs
-	if t.Kind == ir.KindStruct {
+	switch t.Kind {
+	case ir.KindStruct:
 		for _, field := range t.Fields {
-			g.collectFromType(field.Type, visited)
+			g.collectFromType(field.Type, visited, rootVisited)
 		}
-	}
-
-	// Check sum type variants
-	if t.Kind == ir.KindSum {
+	case ir.KindSum:
 		for _, variant := range t.SumOf {
-			g.collectFromType(variant, visited)
+			g.collectFromType(variant, visited, rootVisited)
 		}
+	case ir.KindArray, ir.KindMap:
+		g.collectFromType(t.Item, visited, rootVisited)
+	case ir.KindGeneric:
+		g.collectFromType(t.GenericOf, visited, rootVisited)
+	case ir.KindAlias:
+		g.collectFromType(t.AliasTo, visited, rootVisited)
+	case ir.KindPointer:
+		g.collectFromType(t.PointerTo, visited, rootVisited)
 	}
 }
 
@@ -149,29 +203,15 @@ func (g *Generator) collectNestedTypes(t *ir.Type, visited map[string]bool) {
 	}
 }
 
-// needsEqualityMethod determines if a type requires generated Equal() method
+// needsEqualityMethod determines if a type requires generated Equal() method.
+// It must match the validators template dispatch: only struct items use the
+// generated validateUnique function, every other complex item shape is
+// compared by the reflect or raw JSON helpers in the validate package.
 func needsEqualityMethod(t *ir.Type) bool {
 	if t == nil {
 		return false
 	}
-
-	switch t.Kind {
-	case ir.KindStruct:
-		// Structs always need custom equality
-		return true
-	case ir.KindAlias:
-		// Check if the underlying type needs equality
-		if t.AliasTo != nil {
-			return needsEqualityMethod(t.AliasTo)
-		}
-		return false
-	case ir.KindArray, ir.KindMap:
-		// Arrays and maps of complex types need equality
-		return true
-	default:
-		// Primitives can use == operator
-		return false
-	}
+	return t.Kind == ir.KindStruct
 }
 
 // createEqualityMethodSpec creates an EqualityMethodSpec for a given type
@@ -218,9 +258,17 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			if unwrapped != nil && unwrapped.Kind == ir.KindPrimitive && unwrapped.Primitive == ir.ByteSlice {
 				isByteSlice = true
 			}
-			// Also check by GoType string for jx.Raw or []byte
-			if goType == "jx.Raw" || goType == "[]byte" {
+			if goType == "[]byte" {
 				isByteSlice = true
+			}
+
+			// Raw JSON values look like byte slices but carry JSON
+			// semantics, so they get their own comparison path
+			isRawJSON := false
+			if goType == "jx.Raw" || field.Type.Kind == ir.KindAny ||
+				(unwrapped != nil && unwrapped.Kind == ir.KindAny) {
+				isRawJSON = true
+				isByteSlice = false
 			}
 
 			// Check if this is an array (either direct or wrapped in Optional/Nullable)
@@ -288,6 +336,65 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				}
 			}
 
+			// Classify the remaining array element and map value shapes:
+			// raw JSON values get semantic comparison, element types the ==
+			// operator cannot compare fall back to reflect.DeepEqual
+			isArrayOfRaw := false
+			isArrayOfDeep := false
+			elemArray := arrayType
+			if elemArray.Kind != ir.KindArray && unwrapped != nil && unwrapped.Kind == ir.KindArray {
+				elemArray = unwrapped
+			}
+			if elemArray.Kind == ir.KindArray && elemArray.Item != nil && !isArrayOfStructs {
+				elem := elemArray.Item
+				switch {
+				case elem.Kind == ir.KindAny:
+					isArrayOfRaw = true
+					isArrayOfNullable = false
+				case isArrayOfNullable:
+					// Nullable wrapper elements whose value is neither a
+					// struct nor comparable cannot use the .Value != .Value
+					// path
+					if inner := unwrapOptional(elem); inner != nil && !ir.ComparableWithOperator(inner) {
+						isArrayOfDeep = true
+						isArrayOfNullable = false
+					}
+				case !ir.ComparableWithOperator(elem):
+					isArrayOfDeep = true
+				}
+			}
+
+			isMapOfRaw := false
+			isMapOfDeep := false
+			if mapType.Kind == ir.KindMap && mapType.Item != nil && !isMapOfStructs {
+				switch {
+				case mapType.Item.Kind == ir.KindAny:
+					isMapOfRaw = true
+				case !ir.ComparableWithOperator(mapType.Item):
+					isMapOfDeep = true
+				}
+			}
+
+			// Field values with no == operator, no generated Equal method
+			// and no dedicated path above are compared with reflect.DeepEqual
+			isDeepOnly := false
+			switch categorizeFieldType(field.Type) {
+			case ir.FieldTypePrimitive:
+				if !isRawJSON && !isByteSlice && !ir.ComparableWithOperator(field.Type) {
+					isDeepOnly = true
+				}
+			case ir.FieldTypeOptional, ir.FieldTypeNullable:
+				if unwrapped != nil && !isNestedObject(field.Type) && !isMap && !isArray &&
+					!isRawJSON && !isByteSlice && !ir.ComparableWithOperator(unwrapped) {
+					isDeepOnly = true
+				}
+			case ir.FieldTypePointer:
+				if field.Type.PointerTo != nil && !isNestedObject(field.Type) &&
+					!ir.ComparableWithOperator(field.Type.PointerTo) {
+					isDeepOnly = true
+				}
+			}
+
 			fieldSpec := ir.FieldEqualitySpec{
 				FieldName:          field.Name,
 				FieldType:          categorizeFieldType(field.Type),
@@ -295,11 +402,17 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				IsNested:           isNestedObject(field.Type),
 				IsMap:              isMap,
 				IsMapOfStructs:     isMapOfStructs,
+				IsMapOfRaw:         isMapOfRaw,
+				IsMapOfDeep:        isMapOfDeep,
 				IsArray:            isArray,
 				IsArrayOfStructs:   isArrayOfStructs,
 				IsArrayOfNullable:  isArrayOfNullable,
+				IsArrayOfRaw:       isArrayOfRaw,
+				IsArrayOfDeep:      isArrayOfDeep,
 				IsNilSemanticArray: isNilSemanticArray,
 				IsByteSlice:        isByteSlice,
+				IsRawJSON:          isRawJSON,
+				IsDeepOnly:         isDeepOnly,
 				IsOptionalNullable: isOptionalNullable(field.Type),
 			}
 			spec.Fields = append(spec.Fields, fieldSpec)

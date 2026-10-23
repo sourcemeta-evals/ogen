@@ -29,7 +29,7 @@ func validateUniqueComprehensiveItem(items []ComprehensiveItem) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -69,7 +69,7 @@ func validateUniqueConfiguration(items []Configuration) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -109,7 +109,7 @@ func validateUniqueFeature(items []Feature) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -149,7 +149,7 @@ func validateUniqueUser(items []User) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {

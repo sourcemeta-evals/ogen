@@ -51,8 +51,36 @@ type FieldEqualitySpec struct {
 	// as different values
 	IsNilSemanticArray bool
 
-	// IsByteSlice indicates if this field is a byte slice ([]byte / jx.Raw)
+	// IsByteSlice indicates if this field is a binary byte slice ([]byte)
 	IsByteSlice bool
+
+	// IsRawJSON indicates if this field holds a raw JSON value (jx.Raw)
+	// that must be compared semantically, not byte by byte
+	IsRawJSON bool
+
+	// IsDeepOnly indicates the field value (or the wrapped value for
+	// Optional/Nullable/Pointer fields) has no == operator, no generated
+	// Equal method and no dedicated comparison path, so it is compared
+	// with reflect.DeepEqual
+	IsDeepOnly bool
+
+	// IsArrayOfRaw indicates an array field whose elements are raw JSON
+	// values (jx.Raw) compared semantically element by element
+	IsArrayOfRaw bool
+
+	// IsArrayOfDeep indicates an array field whose elements have no ==
+	// operator and no generated Equal method, so the whole field is
+	// compared with reflect.DeepEqual
+	IsArrayOfDeep bool
+
+	// IsMapOfRaw indicates a map field whose values are raw JSON values
+	// (jx.Raw) compared semantically value by value
+	IsMapOfRaw bool
+
+	// IsMapOfDeep indicates a map field whose values have no == operator
+	// and no generated Equal method, so values are compared with
+	// reflect.DeepEqual
+	IsMapOfDeep bool
 
 	// IsOptionalNullable indicates that the FieldTypeOptional wrapper is an
 	// OptNilT (both Set and Null flags present), not a plain OptT
@@ -107,4 +135,34 @@ type FieldHashSpec struct {
 
 	// IsMapOfStructs indicates map values provide their own Hash() method
 	IsMapOfStructs bool
+
+	// IsMap indicates the wrapped value for Optional/Nullable fields is a map
+	IsMap bool
+
+	// IsArray indicates the wrapped value for Optional/Nullable fields is an array
+	IsArray bool
+
+	// IsRawJSON indicates the field holds raw JSON whose equality ignores
+	// its byte representation, so the bytes must not feed the hash
+	IsRawJSON bool
+
+	// IsDeepOnly indicates the field is compared with reflect.DeepEqual, so
+	// no formatting of it is guaranteed stable across equal values
+	IsDeepOnly bool
+
+	// IsArrayOfRaw indicates array elements are raw JSON values
+	IsArrayOfRaw bool
+
+	// IsArrayOfDeep indicates array elements are compared with reflect.DeepEqual
+	IsArrayOfDeep bool
+
+	// IsMapOfRaw indicates map values are raw JSON values
+	IsMapOfRaw bool
+
+	// IsMapOfDeep indicates map values are compared with reflect.DeepEqual
+	IsMapOfDeep bool
+
+	// IsOptionalNullable indicates the FieldTypeOptional wrapper is an
+	// OptNilT (both Set and Null flags present), not a plain OptT
+	IsOptionalNullable bool
 }

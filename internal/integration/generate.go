@@ -54,3 +54,4 @@ package integration
 //go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-golden      ../../_testdata/examples/complex-uniqueitems/golden-test.yaml
 //go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-integration ../../_testdata/examples/complex-uniqueitems/all-field-types.yaml
 //go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-jira        ../../_testdata/examples/complex-uniqueitems/jira-subset.yaml
+//go:generate go run ../../cmd/ogen -v --clean --package api --target test_complex_uniqueitems/generated-nested      ../../_testdata/examples/complex-uniqueitems/nested-collections.yaml

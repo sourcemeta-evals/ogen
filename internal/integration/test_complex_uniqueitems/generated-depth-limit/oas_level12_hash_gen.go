@@ -5,11 +5,21 @@ package api
 import (
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for Level12 using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a Level12) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a Level12) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "Level12",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash optional field: Value

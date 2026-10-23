@@ -5,11 +5,21 @@ package api
 import (
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for WorkflowTransitionRule using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a WorkflowTransitionRule) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a WorkflowTransitionRule) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "WorkflowTransitionRule",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash primitive field: RuleKey
@@ -17,7 +27,7 @@ func (a WorkflowTransitionRule) Hash() uint64 {
 	// Hash optional field: Configuration
 	if a.Configuration.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.Configuration.Value)))
+		// Wrapped value excluded from the hash: only its presence participates
 	} else {
 		h.Write([]byte{0})
 	}

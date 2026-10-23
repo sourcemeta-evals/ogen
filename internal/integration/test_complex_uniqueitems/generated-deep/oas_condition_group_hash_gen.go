@@ -6,11 +6,21 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for ConditionGroup using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a ConditionGroup) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a ConditionGroup) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "ConditionGroup",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash optional field: Operator
@@ -23,7 +33,7 @@ func (a ConditionGroup) Hash() uint64 {
 	// Hash optional field: Condition
 	if a.Condition.Set {
 		h.Write([]byte{1})
-		nestedHashCondition := a.Condition.Value.Hash()
+		nestedHashCondition := a.Condition.Value.Hash(depth + 1)
 		binary.Write(h, binary.LittleEndian, nestedHashCondition)
 	} else {
 		h.Write([]byte{0})

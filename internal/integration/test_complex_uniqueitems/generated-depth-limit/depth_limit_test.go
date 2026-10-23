@@ -73,22 +73,19 @@ func TestLevel1Equal_FullyNestedPanic(t *testing.T) {
 
 // Test that hashes match for identical items
 func TestLevel1Hash_IdenticalItems(t *testing.T) {
-	item1 := Level1{
-		ID: "test-1",
-		Nested: NewOptLevel2(Level2{
-			Nested: NewOptLevel3(Level3{
-				Nested: NewOptLevel4(Level4{
-					Nested: NewOptLevel5(Level5{
-						Nested: NewOptLevel6(Level6{
-							Nested: NewOptLevel7(Level7{
-								Nested: NewOptLevel8(Level8{
-									Nested: NewOptLevel9(Level9{
-										Nested: NewOptLevel10(Level10{
-											Nested: NewOptLevel11(Level11{
-												Nested: NewOptLevel12(Level12{
-													Value: NewOptString("deep-value"),
-												}),
-											}),
+	// Identical items within the depth limit must hash identically
+	build := func() Level1 {
+		return Level1{
+			ID: "test-1",
+			Nested: NewOptLevel2(Level2{
+				Nested: NewOptLevel3(Level3{
+					Nested: NewOptLevel4(Level4{
+						Nested: NewOptLevel5(Level5{
+							Nested: NewOptLevel6(Level6{
+								Nested: NewOptLevel7(Level7{
+									Nested: NewOptLevel8(Level8{
+										Nested: NewOptLevel9(Level9{
+											Nested: NewOptLevel10(Level10{}),
 										}),
 									}),
 								}),
@@ -97,45 +94,60 @@ func TestLevel1Hash_IdenticalItems(t *testing.T) {
 					}),
 				}),
 			}),
-		}),
+		}
 	}
 
-	item2 := Level1{
-		ID: "test-1",
-		Nested: NewOptLevel2(Level2{
-			Nested: NewOptLevel3(Level3{
-				Nested: NewOptLevel4(Level4{
-					Nested: NewOptLevel5(Level5{
-						Nested: NewOptLevel6(Level6{
-							Nested: NewOptLevel7(Level7{
-								Nested: NewOptLevel8(Level8{
-									Nested: NewOptLevel9(Level9{
-										Nested: NewOptLevel10(Level10{
-											Nested: NewOptLevel11(Level11{
-												Nested: NewOptLevel12(Level12{
-													Value: NewOptString("deep-value"),
-												}),
-											}),
-										}),
-									}),
-								}),
-							}),
-						}),
-					}),
-				}),
-			}),
-		}),
-	}
+	item1 := build()
+	item2 := build()
 
-	hash1 := item1.Hash()
-	hash2 := item2.Hash()
-
-	t.Logf("Hash1: %d", hash1)
-	t.Logf("Hash2: %d", hash2)
+	hash1 := item1.Hash(0)
+	hash2 := item2.Hash(0)
 
 	if hash1 != hash2 {
 		t.Fatalf("Hashes should match for identical items, got hash1=%d, hash2=%d", hash1, hash2)
 	}
+}
+
+// Hashing recurses through nested objects, so it enforces the same depth
+// limit as Equal() instead of overflowing the stack on unbounded values
+func TestLevel1Hash_DepthLimitPanic(t *testing.T) {
+	item := Level1{
+		ID: "test-1",
+		Nested: NewOptLevel2(Level2{
+			Nested: NewOptLevel3(Level3{
+				Nested: NewOptLevel4(Level4{
+					Nested: NewOptLevel5(Level5{
+						Nested: NewOptLevel6(Level6{
+							Nested: NewOptLevel7(Level7{
+								Nested: NewOptLevel8(Level8{
+									Nested: NewOptLevel9(Level9{
+										Nested: NewOptLevel10(Level10{
+											Nested: NewOptLevel11(Level11{
+												Nested: NewOptLevel12(Level12{
+													Value: NewOptString("deep-value"),
+												}),
+											}),
+										}),
+									}),
+								}),
+							}),
+						}),
+					}),
+				}),
+			}),
+		}),
+	}
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatalf("expected Hash to panic past the depth limit")
+		}
+		if _, ok := r.(*validate.DepthLimitError); !ok {
+			t.Fatalf("expected DepthLimitError, got %v", r)
+		}
+	}()
+	item.Hash(0)
 }
 
 // T054: Test depth limit enforcement with 12-level nesting

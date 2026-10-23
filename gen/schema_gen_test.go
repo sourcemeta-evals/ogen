@@ -198,7 +198,7 @@ func TestGenerate(t *testing.T) {
 	}
 }
 
-func TestSchemaGenUniqueItemsGate(t *testing.T) {
+func TestSchemaGenUniqueItemsAcceptsComplexItems(t *testing.T) {
 	objectWithProperties := &jsonschema.Schema{
 		Type: jsonschema.Object,
 		Properties: []jsonschema.Property{
@@ -210,35 +210,37 @@ func TestSchemaGenUniqueItemsGate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		item           *jsonschema.Schema
-		notImplemented bool
+		name string
+		item *jsonschema.Schema
 	}{
 		{
-			name:           "string items are supported",
-			item:           &jsonschema.Schema{Type: jsonschema.String},
-			notImplemented: false,
+			name: "string items",
+			item: &jsonschema.Schema{Type: jsonschema.String},
 		},
 		{
-			name:           "object items with properties are supported",
-			item:           objectWithProperties,
-			notImplemented: false,
+			name: "object items with properties",
+			item: objectWithProperties,
 		},
 		{
-			name:           "missing item type is not implemented",
-			item:           &jsonschema.Schema{Type: ""},
-			notImplemented: true,
+			name: "missing item type",
+			item: &jsonschema.Schema{Type: ""},
 		},
 		{
-			name: "array items are not implemented",
+			name: "array items",
 			item: &jsonschema.Schema{
 				Type: jsonschema.Array,
 				Item: &jsonschema.Schema{Type: jsonschema.String},
 			},
-			notImplemented: true,
 		},
 		{
-			name: "object items without properties compile to maps",
+			name: "nested array of object items",
+			item: &jsonschema.Schema{
+				Type: jsonschema.Array,
+				Item: objectWithProperties,
+			},
+		},
+		{
+			name: "object items without properties",
 			item: func() *jsonschema.Schema {
 				additional := true
 				return &jsonschema.Schema{
@@ -247,10 +249,9 @@ func TestSchemaGenUniqueItemsGate(t *testing.T) {
 					Item:                 &jsonschema.Schema{Type: jsonschema.String},
 				}
 			}(),
-			notImplemented: true,
 		},
 		{
-			name: "nullable object items are not implemented",
+			name: "nullable object items",
 			item: &jsonschema.Schema{
 				Type:     jsonschema.Object,
 				Nullable: true,
@@ -261,7 +262,6 @@ func TestSchemaGenUniqueItemsGate(t *testing.T) {
 					},
 				},
 			},
-			notImplemented: true,
 		},
 	}
 
@@ -277,13 +277,7 @@ func TestSchemaGenUniqueItemsGate(t *testing.T) {
 				Item:        tt.item,
 				UniqueItems: true,
 			}, false)
-
-			if tt.notImplemented {
-				var notImplemented *ErrNotImplemented
-				a.ErrorAs(err, &notImplemented)
-			} else {
-				a.NoError(err)
-			}
+			a.NoError(err)
 		})
 	}
 }

@@ -6,11 +6,21 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for Configuration using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a Configuration) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a Configuration) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "Configuration",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash optional field: Version
@@ -23,13 +33,13 @@ func (a Configuration) Hash() uint64 {
 	// Hash optional field: Settings
 	if a.Settings.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.Settings.Value)))
+		// Wrapped value excluded from the hash: only its presence participates
 	} else {
 		h.Write([]byte{0})
 	}
 	// Hash array field: Features
 	for _, item := range a.Features {
-		binary.Write(h, binary.LittleEndian, item.Hash())
+		binary.Write(h, binary.LittleEndian, item.Hash(depth+1))
 	}
 	return h.Sum64()
 }

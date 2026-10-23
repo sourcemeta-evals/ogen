@@ -464,7 +464,7 @@ func TestComprehensiveItem_HashEqualConsistency(t *testing.T) {
 	}
 
 	// Equal items must have equal hashes
-	if item1.Hash() != item2.Hash() {
+	if item1.Hash(0) != item2.Hash(0) {
 		t.Error("Equal items should have equal hashes")
 	}
 

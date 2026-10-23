@@ -204,20 +204,6 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		schema.DefaultSet = implErr == nil
 	}
 
-	if schema.UniqueItems {
-		item := schema.Item
-		// Object items are supported via generated Equal/Hash methods.
-		// Array items and object items that compile to map or free-form
-		// types stay unsupported: they have no generated methods and do
-		// not satisfy the comparable fallback helper.
-		switch {
-		case item == nil || item.Type == "" || item.Type == jsonschema.Array:
-			return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
-		case item.Type == jsonschema.Object && (len(item.Properties) == 0 || item.Nullable):
-			return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
-		}
-	}
-
 	if n := schema.XOgenName; n != "" {
 		name = n
 	} else if len(name) > 0 && name[0] >= '0' && name[0] <= '9' {

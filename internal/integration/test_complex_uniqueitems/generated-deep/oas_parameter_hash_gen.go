@@ -6,11 +6,21 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for Parameter using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a Parameter) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a Parameter) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "Parameter",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash optional field: Key
@@ -23,7 +33,7 @@ func (a Parameter) Hash() uint64 {
 	// Hash optional field: Value
 	if a.Value.Set {
 		h.Write([]byte{1})
-		nestedHashValue := a.Value.Value.Hash()
+		nestedHashValue := a.Value.Value.Hash(depth + 1)
 		binary.Write(h, binary.LittleEndian, nestedHashValue)
 	} else {
 		h.Write([]byte{0})

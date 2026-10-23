@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: Nested Collections UniqueItems Test
+  version: 1.0.0
+  description: |
+    Integration test for uniqueItems validation on the item shapes that have
+    no generated Equal/Hash fast path:
+    - Arrays of arrays
+    - Arrays of map-only objects (additionalProperties)
+    - Arrays of nullable objects
+    - Arrays of free-form values (no item schema)
+    - Anonymous operation body arrays of objects
+    - Object items with nested collection, raw JSON and float map fields
+
+paths:
+  /collections:
+    post:
+      operationId: createCollection
+      summary: Create a collection exercising every fallback item shape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Collection'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: integer
+  /grids/batch:
+    post:
+      operationId: addGridBatch
+      summary: Anonymous request body array with unique inline object items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              uniqueItems: true
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  label:
+                    type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: integer
+
+components:
+  schemas:
+    Collection:
+      type: object
+      properties:
+        grids:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Grid'
+        matrices:
+          type: array
+          uniqueItems: true
+          items:
+            type: array
+            items:
+              type: integer
+        tagsets:
+          type: array
+          uniqueItems: true
+          items:
+            type: object
+            additionalProperties:
+              type: string
+        maybes:
+          type: array
+          uniqueItems: true
+          items:
+            type: object
+            nullable: true
+            properties:
+              id:
+                type: string
+        anything:
+          type: array
+          uniqueItems: true
+          items: {}
+    Grid:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        matrix:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        labelsByGroup:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        weights:
+          type: object
+          additionalProperties:
+            type: number
+            format: double
+        extra: {}

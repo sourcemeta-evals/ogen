@@ -6,11 +6,21 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for GoldenItem using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a GoldenItem) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a GoldenItem) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "GoldenItem",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash primitive field: ID
@@ -27,7 +37,12 @@ func (a GoldenItem) Hash() uint64 {
 	// Hash optional field: ExternalRef
 	if a.ExternalRef.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.ExternalRef.Value)))
+		if a.ExternalRef.Null {
+			h.Write([]byte{0})
+		} else {
+			h.Write([]byte{1})
+			h.Write([]byte(fmt.Sprintf("%v", a.ExternalRef.Value)))
+		}
 	} else {
 		h.Write([]byte{0})
 	}
@@ -38,14 +53,14 @@ func (a GoldenItem) Hash() uint64 {
 	// Hash optional field: Attributes
 	if a.Attributes.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.Attributes.Value)))
+		// Wrapped value excluded from the hash: only its presence participates
 	} else {
 		h.Write([]byte{0})
 	}
 	// Hash optional field: Metadata
 	if a.Metadata.Set {
 		h.Write([]byte{1})
-		nestedHashMetadata := a.Metadata.Value.Hash()
+		nestedHashMetadata := a.Metadata.Value.Hash(depth + 1)
 		binary.Write(h, binary.LittleEndian, nestedHashMetadata)
 	} else {
 		h.Write([]byte{0})

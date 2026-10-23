@@ -29,7 +29,7 @@ func validateUniqueCondition(items []Condition) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -69,7 +69,7 @@ func validateUniqueConditionGroup(items []ConditionGroup) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -109,7 +109,7 @@ func validateUniqueParameter(items []Parameter) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -149,7 +149,7 @@ func validateUniqueParameterGroup(items []ParameterGroup) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -189,7 +189,7 @@ func validateUniqueParameterValue(items []ParameterValue) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -229,7 +229,7 @@ func validateUniqueRuleConfiguration(items []RuleConfiguration) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -269,7 +269,7 @@ func validateUniqueWorkflowTransition(items []WorkflowTransition) (err error) {
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {

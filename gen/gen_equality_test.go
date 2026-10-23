@@ -203,17 +203,18 @@ func TestWriteArrayComparison(t *testing.T) {
 		aArray           string
 		bArray           string
 		indent           string
-		isArrayOfStructs bool
+		field            ir.FieldEqualitySpec
 		hasDepth         bool
 		expectedContains []string
+		notContains      []string
 	}{
 		{
-			name:             "primitive array without depth",
-			aArray:           "a.Items",
-			bArray:           "b.Items",
-			indent:           "\t",
-			isArrayOfStructs: false,
-			hasDepth:         false,
+			name:     "primitive array without depth",
+			aArray:   "a.Items",
+			bArray:   "b.Items",
+			indent:   "\t",
+			field:    ir.FieldEqualitySpec{},
+			hasDepth: false,
 			expectedContains: []string{
 				"if len(a.Items) != len(b.Items)",
 				"for i := range a.Items",
@@ -222,12 +223,12 @@ func TestWriteArrayComparison(t *testing.T) {
 			},
 		},
 		{
-			name:             "struct array with depth",
-			aArray:           "a.Nested",
-			bArray:           "b.Nested",
-			indent:           "\t\t",
-			isArrayOfStructs: true,
-			hasDepth:         true,
+			name:     "struct array with depth",
+			aArray:   "a.Nested",
+			bArray:   "b.Nested",
+			indent:   "\t\t",
+			field:    ir.FieldEqualitySpec{IsArrayOfStructs: true},
+			hasDepth: true,
 			expectedContains: []string{
 				"if len(a.Nested) != len(b.Nested)",
 				"for i := range a.Nested",
@@ -236,18 +237,43 @@ func TestWriteArrayComparison(t *testing.T) {
 			},
 		},
 		{
-			name:             "struct array without depth",
-			aArray:           "a.Nested",
-			bArray:           "b.Nested",
-			indent:           "\t",
-			isArrayOfStructs: true,
-			hasDepth:         false,
+			name:     "struct array without depth",
+			aArray:   "a.Nested",
+			bArray:   "b.Nested",
+			indent:   "\t",
+			field:    ir.FieldEqualitySpec{IsArrayOfStructs: true},
+			hasDepth: false,
 			expectedContains: []string{
 				"if len(a.Nested) != len(b.Nested)",
 				"for i := range a.Nested",
 				"if !a.Nested[i].Equal(b.Nested[i])",
 				"return false",
 			},
+		},
+		{
+			name:     "raw JSON elements compare semantically",
+			aArray:   "a.Values",
+			bArray:   "b.Values",
+			indent:   "\t",
+			field:    ir.FieldEqualitySpec{IsArrayOfRaw: true},
+			hasDepth: true,
+			expectedContains: []string{
+				"if len(a.Values) != len(b.Values)",
+				"if !validate.EqualRawJSON(a.Values[i], b.Values[i])",
+			},
+			notContains: []string{"a.Values[i] != b.Values[i]"},
+		},
+		{
+			name:     "elements without == operator use reflect.DeepEqual",
+			aArray:   "a.Matrix",
+			bArray:   "b.Matrix",
+			indent:   "\t",
+			field:    ir.FieldEqualitySpec{IsArrayOfDeep: true},
+			hasDepth: true,
+			expectedContains: []string{
+				"if !reflect.DeepEqual(a.Matrix, b.Matrix)",
+			},
+			notContains: []string{"for i := range", "a.Matrix[i]"},
 		},
 	}
 
@@ -256,12 +282,16 @@ func TestWriteArrayComparison(t *testing.T) {
 			var b strings.Builder
 			g := &Generator{}
 
-			g.writeArrayComparison(&b, tt.aArray, tt.bArray, tt.indent, tt.isArrayOfStructs, tt.hasDepth)
+			g.writeArrayComparisonWithNullable(&b, tt.aArray, tt.bArray, tt.indent, tt.field, tt.hasDepth)
 
 			output := b.String()
 			for _, expected := range tt.expectedContains {
 				require.Contains(t, output, expected,
 					"output should contain: %s", expected)
+			}
+			for _, notExpected := range tt.notContains {
+				require.NotContains(t, output, notExpected,
+					"output should NOT contain: %s", notExpected)
 			}
 
 			// Verify proper indentation
@@ -515,21 +545,21 @@ func TestNeedsEqualityMethod(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "array needs equality",
+			name: "array items use the deep helper instead",
 			irType: &ir.Type{
 				Kind: ir.KindArray,
 				Item: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String},
 			},
-			expected: true,
+			expected: false,
 		},
 		{
-			name: "map needs equality",
+			name: "map items use the deep helper instead",
 			irType: &ir.Type{
 				Kind: ir.KindMap,
 				Name: "Attributes",
 				Item: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String},
 			},
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "primitive does not need equality",
@@ -537,13 +567,13 @@ func TestNeedsEqualityMethod(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "alias to struct needs equality",
+			name: "alias to struct uses the deep helper instead",
 			irType: &ir.Type{
 				Kind:    ir.KindAlias,
 				Name:    "StatusAlias",
 				AliasTo: &ir.Type{Kind: ir.KindStruct, Name: "WorkflowStatus"},
 			},
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "alias to primitive does not need equality",
@@ -629,9 +659,34 @@ func TestCollectEqualitySpecs(t *testing.T) {
 		},
 	}
 
+	// Anonymous request body arrays never land in tstorage, so operation
+	// payloads must be walked as collection roots too
+	anonItem := &ir.Type{
+		Kind: ir.KindStruct,
+		Name: "AnonItem",
+		Fields: []*ir.Field{
+			{Name: "ID", Type: &ir.Type{Kind: ir.KindPrimitive, Primitive: ir.String}},
+		},
+	}
+	anonArray := &ir.Type{
+		Kind:   ir.KindArray,
+		Item:   anonItem,
+		Schema: &jsonschema.Schema{UniqueItems: true},
+	}
+
 	g := &Generator{
 		tstorage:      newTStorage(),
 		equalitySpecs: []*ir.EqualityMethodSpec{},
+		operations: []*ir.Operation{
+			{
+				Request: &ir.Request{
+					Type: anonArray,
+					Contents: map[ir.ContentType]ir.Media{
+						ir.ContentType(ir.EncodingJSON): {Type: anonArray},
+					},
+				},
+			},
+		},
 	}
 	g.tstorage.types["Request"] = request
 
@@ -649,11 +704,13 @@ func TestCollectEqualitySpecs(t *testing.T) {
 	require.Contains(t, collected, "StatusProperties")
 	require.Contains(t, collected, "AttributeValue",
 		"struct map values should be collected through KindMap traversal")
+	require.Contains(t, collected, "AnonItem",
+		"items of anonymous operation payload arrays should be collected")
 
 	// Non-unique arrays and uniqueItems arrays of primitives need no methods
 	require.NotContains(t, collected, "PlainStatus")
 	require.NotContains(t, collected, "Request")
-	require.Len(t, collected, 3)
+	require.Len(t, collected, 4)
 
 	// The map of structs must be flagged for recursive comparison
 	var attributesField *ir.FieldEqualitySpec
@@ -671,15 +728,15 @@ func TestCollectEqualitySpecs(t *testing.T) {
 func TestWriteMapComparison(t *testing.T) {
 	tests := []struct {
 		name             string
-		isMapOfStructs   bool
+		field            ir.FieldEqualitySpec
 		hasDepth         bool
 		expectedContains []string
 		notContains      []string
 	}{
 		{
-			name:           "primitive values",
-			isMapOfStructs: false,
-			hasDepth:       true,
+			name:     "primitive values",
+			field:    ir.FieldEqualitySpec{},
+			hasDepth: true,
 			expectedContains: []string{
 				"if len(a.Attrs) != len(b.Attrs)",
 				"for k, v := range a.Attrs",
@@ -688,9 +745,9 @@ func TestWriteMapComparison(t *testing.T) {
 			notContains: []string{".Equal("},
 		},
 		{
-			name:           "struct values with depth",
-			isMapOfStructs: true,
-			hasDepth:       true,
+			name:     "struct values with depth",
+			field:    ir.FieldEqualitySpec{IsMapOfStructs: true},
+			hasDepth: true,
 			expectedContains: []string{
 				"if len(a.Attrs) != len(b.Attrs)",
 				"for k, v := range a.Attrs",
@@ -700,13 +757,33 @@ func TestWriteMapComparison(t *testing.T) {
 			notContains: []string{"v != bv"},
 		},
 		{
-			name:           "struct values without depth",
-			isMapOfStructs: true,
-			hasDepth:       false,
+			name:     "struct values without depth",
+			field:    ir.FieldEqualitySpec{IsMapOfStructs: true},
+			hasDepth: false,
 			expectedContains: []string{
 				"if !v.Equal(bv)",
 			},
 			notContains: []string{"v != bv", "depth+1"},
+		},
+		{
+			name:     "raw JSON values compare semantically",
+			field:    ir.FieldEqualitySpec{IsMapOfRaw: true},
+			hasDepth: true,
+			expectedContains: []string{
+				"bv, ok := b.Attrs[k]",
+				"if !ok || !validate.EqualRawJSON(v, bv)",
+			},
+			notContains: []string{"v != bv", ".Equal("},
+		},
+		{
+			name:     "values without == operator use reflect.DeepEqual",
+			field:    ir.FieldEqualitySpec{IsMapOfDeep: true},
+			hasDepth: true,
+			expectedContains: []string{
+				"bv, ok := b.Attrs[k]",
+				"if !ok || !reflect.DeepEqual(v, bv)",
+			},
+			notContains: []string{"v != bv", ".Equal("},
 		},
 	}
 
@@ -715,7 +792,7 @@ func TestWriteMapComparison(t *testing.T) {
 			var b strings.Builder
 			g := &Generator{}
 
-			g.writeMapComparison(&b, "a.Attrs", "b.Attrs", "\t", tt.isMapOfStructs, tt.hasDepth)
+			g.writeMapComparison(&b, "a.Attrs", "b.Attrs", "\t", tt.field, tt.hasDepth)
 
 			output := b.String()
 			for _, expected := range tt.expectedContains {
@@ -734,6 +811,7 @@ func TestWriteFieldHash(t *testing.T) {
 	tests := []struct {
 		name             string
 		field            ir.FieldHashSpec
+		hasDepth         bool
 		expectedContains []string
 		notContains      []string
 	}{
@@ -815,6 +893,102 @@ func TestWriteFieldHash(t *testing.T) {
 				"binary.Write(h, binary.LittleEndian, a.Attrs[k].Hash())",
 			},
 		},
+		{
+			name: "nested hashes propagate the depth counter",
+			field: ir.FieldHashSpec{
+				FieldName:        "Watchers",
+				FieldType:        ir.FieldTypeArray,
+				GoType:           "[]User",
+				IsArrayOfStructs: true,
+			},
+			hasDepth: true,
+			expectedContains: []string{
+				"binary.Write(h, binary.LittleEndian, item.Hash(depth+1))",
+			},
+			notContains: []string{"item.Hash()"},
+		},
+		{
+			name: "raw JSON fields are excluded from the hash",
+			field: ir.FieldHashSpec{
+				FieldName: "Extra",
+				FieldType: ir.FieldTypePrimitive,
+				GoType:    "jx.Raw",
+				IsRawJSON: true,
+			},
+			expectedContains: []string{
+				"// Field Extra is excluded from the hash",
+			},
+			notContains: []string{"fmt.Sprintf", "h.Write"},
+		},
+		{
+			name: "optional-nullable payload is hashed only when active",
+			field: ir.FieldHashSpec{
+				FieldName:          "Ref",
+				FieldType:          ir.FieldTypeOptional,
+				GoType:             "string",
+				IsOptionalNullable: true,
+			},
+			expectedContains: []string{
+				"if a.Ref.Set",
+				"if a.Ref.Null",
+				"fmt.Sprintf(\"%v\", a.Ref.Value)",
+			},
+		},
+		{
+			name: "raw JSON map values hash keys only",
+			field: ir.FieldHashSpec{
+				FieldName:  "Extras",
+				FieldType:  ir.FieldTypeMap,
+				GoType:     "ExtrasMap",
+				IsMapOfRaw: true,
+			},
+			expectedContains: []string{
+				"sort.Strings(keysExtras)",
+				"h.Write([]byte(k))",
+				"// Map values excluded from the hash",
+			},
+			notContains: []string{"fmt.Sprintf(\"%v\", a.Extras[k])"},
+		},
+		{
+			name: "float map values normalize negative zero",
+			field: ir.FieldHashSpec{
+				FieldName: "Scores",
+				FieldType: ir.FieldTypeMap,
+				GoType:    "map[string]float64",
+			},
+			expectedContains: []string{
+				"v := a.Scores[k]",
+				"if v == 0",
+			},
+			notContains: []string{"fmt.Sprintf(\"%v\", a.Scores[k])"},
+		},
+		{
+			name: "wrapped container contributes only its presence",
+			field: ir.FieldHashSpec{
+				FieldName: "Labels",
+				FieldType: ir.FieldTypeOptional,
+				GoType:    "map[string]string",
+				IsMap:     true,
+			},
+			expectedContains: []string{
+				"if a.Labels.Set",
+				"// Wrapped value excluded from the hash",
+			},
+			notContains: []string{"fmt.Sprintf(\"%v\", a.Labels.Value)"},
+		},
+		{
+			name: "deep array elements are excluded from the hash",
+			field: ir.FieldHashSpec{
+				FieldName:     "Matrix",
+				FieldType:     ir.FieldTypeArray,
+				GoType:        "[][]int",
+				IsArrayOfDeep: true,
+			},
+			expectedContains: []string{
+				"// Array field Matrix is excluded from the hash",
+			},
+			notContains: []string{"for _, item := range"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -822,7 +996,7 @@ func TestWriteFieldHash(t *testing.T) {
 			var b strings.Builder
 			g := &Generator{}
 
-			g.writeFieldHash(&b, tt.field)
+			g.writeFieldHash(&b, tt.field, tt.hasDepth)
 
 			output := b.String()
 			for _, expected := range tt.expectedContains {

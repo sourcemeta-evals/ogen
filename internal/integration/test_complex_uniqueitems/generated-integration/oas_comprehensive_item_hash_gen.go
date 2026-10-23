@@ -6,11 +6,21 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for ComprehensiveItem using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a ComprehensiveItem) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a ComprehensiveItem) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "ComprehensiveItem",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash primitive field: ID
@@ -42,7 +52,12 @@ func (a ComprehensiveItem) Hash() uint64 {
 	// Hash optional field: ExternalId
 	if a.ExternalId.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.ExternalId.Value)))
+		if a.ExternalId.Null {
+			h.Write([]byte{0})
+		} else {
+			h.Write([]byte{1})
+			h.Write([]byte(fmt.Sprintf("%v", a.ExternalId.Value)))
+		}
 	} else {
 		h.Write([]byte{0})
 	}
@@ -71,21 +86,21 @@ func (a ComprehensiveItem) Hash() uint64 {
 	// Hash optional field: Metadata
 	if a.Metadata.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.Metadata.Value)))
+		// Wrapped value excluded from the hash: only its presence participates
 	} else {
 		h.Write([]byte{0})
 	}
 	// Hash optional field: CustomFields
 	if a.CustomFields.Set {
 		h.Write([]byte{1})
-		h.Write([]byte(fmt.Sprintf("%v", a.CustomFields.Value)))
+		// Wrapped value excluded from the hash: only its presence participates
 	} else {
 		h.Write([]byte{0})
 	}
 	// Hash optional field: Owner
 	if a.Owner.Set {
 		h.Write([]byte{1})
-		nestedHashOwner := a.Owner.Value.Hash()
+		nestedHashOwner := a.Owner.Value.Hash(depth + 1)
 		binary.Write(h, binary.LittleEndian, nestedHashOwner)
 	} else {
 		h.Write([]byte{0})
@@ -93,19 +108,19 @@ func (a ComprehensiveItem) Hash() uint64 {
 	// Hash optional field: Assignee
 	if a.Assignee.Set {
 		h.Write([]byte{1})
-		nestedHashAssignee := a.Assignee.Value.Hash()
+		nestedHashAssignee := a.Assignee.Value.Hash(depth + 1)
 		binary.Write(h, binary.LittleEndian, nestedHashAssignee)
 	} else {
 		h.Write([]byte{0})
 	}
 	// Hash array field: Watchers
 	for _, item := range a.Watchers {
-		binary.Write(h, binary.LittleEndian, item.Hash())
+		binary.Write(h, binary.LittleEndian, item.Hash(depth+1))
 	}
 	// Hash optional field: Configuration
 	if a.Configuration.Set {
 		h.Write([]byte{1})
-		nestedHashConfiguration := a.Configuration.Value.Hash()
+		nestedHashConfiguration := a.Configuration.Value.Hash(depth + 1)
 		binary.Write(h, binary.LittleEndian, nestedHashConfiguration)
 	} else {
 		h.Write([]byte{0})

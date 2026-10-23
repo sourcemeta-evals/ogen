@@ -62,7 +62,11 @@ func writeValidateUnique(b *strings.Builder, spec *ir.EqualityMethodSpec) {
 
 	// Duplicate detection loop
 	fmt.Fprintf(b, "\tfor i, item := range items {\n")
-	fmt.Fprintf(b, "\t\thash := item.Hash()\n")
+	if spec.NeedsDepthTracking {
+		fmt.Fprintf(b, "\t\thash := item.Hash(0)\n")
+	} else {
+		fmt.Fprintf(b, "\t\thash := item.Hash()\n")
+	}
 	fmt.Fprintf(b, "\t\tbucket := buckets[hash]\n\n")
 	fmt.Fprintf(b, "\t\tfor _, existing := range bucket {\n")
 

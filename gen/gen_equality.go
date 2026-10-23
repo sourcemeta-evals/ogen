@@ -67,13 +67,26 @@ func (g *Generator) generateEqualMethod(spec *ir.EqualityMethodSpec, pkgName str
 func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqualitySpec, hasDepth bool) {
 	switch field.FieldType {
 	case ir.FieldTypePrimitive:
-		// Byte slices need bytes.Equal()
-		if field.IsByteSlice {
+		switch {
+		case field.IsRawJSON:
+			// Raw JSON values compare semantically, not byte by byte
+			fmt.Fprintf(b, "\t// Compare raw JSON field: %s\n", field.FieldName)
+			fmt.Fprintf(b, "\tif !validate.EqualRawJSON(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\treturn false\n")
+			fmt.Fprintf(b, "\t}\n")
+		case field.IsByteSlice:
+			// Byte slices need bytes.Equal()
 			fmt.Fprintf(b, "\t// Compare byte slice field: %s\n", field.FieldName)
 			fmt.Fprintf(b, "\tif !bytes.Equal(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\treturn false\n")
 			fmt.Fprintf(b, "\t}\n")
-		} else {
+		case field.IsDeepOnly:
+			// No == operator for this type
+			fmt.Fprintf(b, "\t// Compare field without == operator: %s\n", field.FieldName)
+			fmt.Fprintf(b, "\tif !reflect.DeepEqual(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\treturn false\n")
+			fmt.Fprintf(b, "\t}\n")
+		default:
 			// Simple equality check
 			fmt.Fprintf(b, "\tif a.%s != b.%s {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\treturn false\n")
@@ -107,16 +120,25 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsMap:
 			// Optional wrapper around map - need custom comparison
-			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), valueIndent, field.IsMapOfStructs, hasDepth)
+			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), valueIndent, field, hasDepth)
 		case field.IsArray:
 			// Optional wrapper around array - need iteration
 			aArray := fmt.Sprintf("a.%s.Value", field.FieldName)
 			bArray := fmt.Sprintf("b.%s.Value", field.FieldName)
-			g.writeArrayComparisonWithNullable(b, aArray, bArray, valueIndent,
-				field.IsArrayOfStructs, field.IsArrayOfNullable, hasDepth)
+			g.writeArrayComparisonWithNullable(b, aArray, bArray, valueIndent, field, hasDepth)
+		case field.IsRawJSON:
+			// Optional wrapper around raw JSON - compare semantically
+			fmt.Fprintf(b, "%sif !validate.EqualRawJSON(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
+			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsByteSlice:
 			// Optional wrapper around byte slice - use bytes.Equal()
 			fmt.Fprintf(b, "%sif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
+			fmt.Fprintf(b, "%s}\n", valueIndent)
+		case field.IsDeepOnly:
+			// Optional wrapper around a value without == operator
+			fmt.Fprintf(b, "%sif !reflect.DeepEqual(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		default:
@@ -149,16 +171,25 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsMap:
 			// Nullable wrapper around map - need custom comparison
-			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), "\t\t", field.IsMapOfStructs, hasDepth)
+			g.writeMapComparison(b, fmt.Sprintf("a.%s.Value", field.FieldName), fmt.Sprintf("b.%s.Value", field.FieldName), "\t\t", field, hasDepth)
 		case field.IsArray:
 			// Nullable wrapper around array - need iteration
 			aArray := fmt.Sprintf("a.%s.Value", field.FieldName)
 			bArray := fmt.Sprintf("b.%s.Value", field.FieldName)
-			g.writeArrayComparisonWithNullable(b, aArray, bArray, "\t\t",
-				field.IsArrayOfStructs, field.IsArrayOfNullable, hasDepth)
+			g.writeArrayComparisonWithNullable(b, aArray, bArray, "\t\t", field, hasDepth)
+		case field.IsRawJSON:
+			// Nullable wrapper around raw JSON - compare semantically
+			fmt.Fprintf(b, "\t\tif !validate.EqualRawJSON(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsByteSlice:
 			// Nullable wrapper around byte slice - use bytes.Equal()
 			fmt.Fprintf(b, "\t\tif !bytes.Equal(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
+		case field.IsDeepOnly:
+			// Nullable wrapper around a value without == operator
+			fmt.Fprintf(b, "\t\tif !reflect.DeepEqual(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\t\treturn false\n")
 			fmt.Fprintf(b, "\t\t}\n")
 		default:
@@ -172,6 +203,14 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 	case ir.FieldTypePointer:
 		// Pointer field comparison
 		fmt.Fprintf(b, "\t// Compare pointer field: %s\n", field.FieldName)
+		if field.IsDeepOnly {
+			// Pointee has no == operator; reflect.DeepEqual dereferences
+			// pointers and handles nil on either side
+			fmt.Fprintf(b, "\tif !reflect.DeepEqual(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\treturn false\n")
+			fmt.Fprintf(b, "\t}\n")
+			return
+		}
 		fmt.Fprintf(b, "\tif (a.%s == nil) != (b.%s == nil) {\n", field.FieldName, field.FieldName)
 		fmt.Fprintf(b, "\t\treturn false\n")
 		fmt.Fprintf(b, "\t}\n")
@@ -193,6 +232,15 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 	case ir.FieldTypeArray:
 		// Array field comparison
 		fmt.Fprintf(b, "\t// Compare array field: %s\n", field.FieldName)
+		if field.IsArrayOfDeep {
+			// Elements have no == operator and no generated Equal method.
+			// reflect.DeepEqual also distinguishes nil from empty slices,
+			// which covers nil-semantic arrays
+			fmt.Fprintf(b, "\tif !reflect.DeepEqual(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\treturn false\n")
+			fmt.Fprintf(b, "\t}\n")
+			return
+		}
 		if field.IsNilSemanticArray {
 			// nil encodes an absent or null property, which differs from []
 			fmt.Fprintf(b, "\tif (a.%s == nil) != (b.%s == nil) {\n", field.FieldName, field.FieldName)
@@ -205,6 +253,11 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		fmt.Fprintf(b, "\tfor i := range a.%s {\n", field.FieldName)
 		// Check if array elements are nullable wrappers
 		switch {
+		case field.IsArrayOfRaw:
+			// Raw JSON elements - compare semantically
+			fmt.Fprintf(b, "\t\tif !validate.EqualRawJSON(a.%s[i], b.%s[i]) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\t\treturn false\n")
+			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsArrayOfNullable:
 			// Nullable wrapper elements - compare Null flag then Value
 			fmt.Fprintf(b, "\t\tif a.%s[i].Null != b.%s[i].Null {\n", field.FieldName, field.FieldName)
@@ -246,7 +299,7 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 	case ir.FieldTypeMap:
 		// Map field comparison
 		fmt.Fprintf(b, "\t// Compare map field: %s\n", field.FieldName)
-		g.writeMapComparison(b, fmt.Sprintf("a.%s", field.FieldName), fmt.Sprintf("b.%s", field.FieldName), "\t", field.IsMapOfStructs, hasDepth)
+		g.writeMapComparison(b, fmt.Sprintf("a.%s", field.FieldName), fmt.Sprintf("b.%s", field.FieldName), "\t", field, hasDepth)
 
 	case ir.FieldTypeNestedObject:
 		// Nested object comparison (recursive Equal() call)
@@ -274,13 +327,27 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 	fmt.Fprintf(&b, "\t\"encoding/binary\"\n")
 	fmt.Fprintf(&b, "\t\"fmt\"\n")
 	fmt.Fprintf(&b, "\t\"hash/fnv\"\n")
-	fmt.Fprintf(&b, "\t\"sort\"\n")
+	fmt.Fprintf(&b, "\t\"sort\"\n\n")
+	fmt.Fprintf(&b, "\t\"github.com/ogen-go/ogen/validate\"\n")
 	fmt.Fprintf(&b, ")\n\n")
 
 	// Method signature
 	fmt.Fprintf(&b, "// Hash computes a hash value for %s using FNV-1a.\n", spec.TypeName)
 	fmt.Fprintf(&b, "// Equal objects must produce equal hashes.\n")
-	fmt.Fprintf(&b, "func (a %s) Hash() uint64 {\n", spec.TypeName)
+	if spec.NeedsDepthTracking {
+		fmt.Fprintf(&b, "// The depth parameter prevents infinite recursion on nested objects.\n")
+		fmt.Fprintf(&b, "func (a %s) Hash(depth int) uint64 {\n", spec.TypeName)
+
+		// Depth limit check
+		fmt.Fprintf(&b, "\tif depth > %d {\n", spec.MaxDepth)
+		fmt.Fprintf(&b, "\t\tpanic(&validate.DepthLimitError{\n")
+		fmt.Fprintf(&b, "\t\t\tMaxDepth: %d,\n", spec.MaxDepth)
+		fmt.Fprintf(&b, "\t\t\tTypeName: %q,\n", spec.TypeName)
+		fmt.Fprintf(&b, "\t\t})\n")
+		fmt.Fprintf(&b, "\t}\n\n")
+	} else {
+		fmt.Fprintf(&b, "func (a %s) Hash() uint64 {\n", spec.TypeName)
+	}
 
 	// Initialize hash
 	fmt.Fprintf(&b, "\th := fnv.New64a()\n\n")
@@ -289,15 +356,24 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 	for _, field := range spec.Fields {
 		// Convert FieldEqualitySpec to FieldHashSpec
 		hashField := ir.FieldHashSpec{
-			FieldName:         field.FieldName,
-			FieldType:         field.FieldType,
-			GoType:            field.GoType,
-			IsNested:          field.IsNested,
-			IsArrayOfStructs:  field.IsArrayOfStructs,
-			IsArrayOfNullable: field.IsArrayOfNullable,
-			IsMapOfStructs:    field.IsMapOfStructs,
+			FieldName:          field.FieldName,
+			FieldType:          field.FieldType,
+			GoType:             field.GoType,
+			IsNested:           field.IsNested,
+			IsArrayOfStructs:   field.IsArrayOfStructs,
+			IsArrayOfNullable:  field.IsArrayOfNullable,
+			IsMapOfStructs:     field.IsMapOfStructs,
+			IsMap:              field.IsMap,
+			IsArray:            field.IsArray,
+			IsRawJSON:          field.IsRawJSON,
+			IsDeepOnly:         field.IsDeepOnly,
+			IsArrayOfRaw:       field.IsArrayOfRaw,
+			IsArrayOfDeep:      field.IsArrayOfDeep,
+			IsMapOfRaw:         field.IsMapOfRaw,
+			IsMapOfDeep:        field.IsMapOfDeep,
+			IsOptionalNullable: field.IsOptionalNullable,
 		}
-		g.writeFieldHash(&b, hashField)
+		g.writeFieldHash(&b, hashField, spec.NeedsDepthTracking)
 	}
 
 	fmt.Fprintf(&b, "\treturn h.Sum64()\n")
@@ -334,10 +410,29 @@ func writeFloatHash(b *strings.Builder, indent, name, expr string) {
 	fmt.Fprintf(b, "%sh.Write([]byte(fmt.Sprintf(\"%%v\", %s)))\n", indent, name)
 }
 
-// writeFieldHash generates hashing code for a single field
-func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
+// writeFieldHash generates hashing code for a single field.
+//
+// Every write must be derivable from the data the generated Equal() method
+// compares: fields or payloads Equal() ignores, and representations it does
+// not distinguish, must not feed the hash, or equal values could land in
+// different buckets. Skipping a field entirely is always safe, because
+// colliding values are resolved by Equal().
+func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, hasDepth bool) {
+	nestedHashCall := func(expr string) string {
+		if hasDepth {
+			return fmt.Sprintf("%s.Hash(depth+1)", expr)
+		}
+		return fmt.Sprintf("%s.Hash()", expr)
+	}
+
 	switch field.FieldType {
 	case ir.FieldTypePrimitive:
+		if field.IsRawJSON || field.IsDeepOnly {
+			// Equality for this field ignores representation details the
+			// formatted bytes would expose
+			fmt.Fprintf(b, "\t// Field %s is excluded from the hash: its equality ignores representation details\n", field.FieldName)
+			return
+		}
 		// Hash primitive field
 		fmt.Fprintf(b, "\t// Hash primitive field: %s\n", field.FieldName)
 		if isFloatGoType(field.GoType) {
@@ -351,15 +446,19 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		fmt.Fprintf(b, "\t// Hash optional field: %s\n", field.FieldName)
 		fmt.Fprintf(b, "\tif a.%s.Set {\n", field.FieldName)
 		fmt.Fprintf(b, "\t\th.Write([]byte{1})\n")
-		if field.IsNested {
-			// Optional wrapper around nested object - call Hash()
-			fmt.Fprintf(b, "\t\tnestedHash%s := a.%s.Value.Hash()\n", field.FieldName, field.FieldName)
-			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
-		} else if isFloatGoType(field.GoType) {
-			writeFloatHash(b, "\t\t", "v"+field.FieldName, "a."+field.FieldName+".Value")
-		} else {
-			// Optional wrapper around primitive - format value
-			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s.Value)))\n", field.FieldName)
+		valueIndent := "\t\t"
+		if field.IsOptionalNullable {
+			// The null state participates in equality, and the inactive
+			// payload under it does not
+			fmt.Fprintf(b, "\t\tif a.%s.Null {\n", field.FieldName)
+			fmt.Fprintf(b, "\t\t\th.Write([]byte{0})\n")
+			fmt.Fprintf(b, "\t\t} else {\n")
+			fmt.Fprintf(b, "\t\t\th.Write([]byte{1})\n")
+			valueIndent = "\t\t\t"
+		}
+		g.writeWrappedValueHash(b, field, valueIndent, "a."+field.FieldName+".Value", nestedHashCall)
+		if field.IsOptionalNullable {
+			fmt.Fprintf(b, "\t\t}\n")
 		}
 		fmt.Fprintf(b, "\t} else {\n")
 		fmt.Fprintf(b, "\t\th.Write([]byte{0})\n")
@@ -372,16 +471,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		fmt.Fprintf(b, "\t\th.Write([]byte{0})\n")
 		fmt.Fprintf(b, "\t} else {\n")
 		fmt.Fprintf(b, "\t\th.Write([]byte{1})\n")
-		if field.IsNested {
-			// Nullable wrapper around nested object - call Hash()
-			fmt.Fprintf(b, "\t\tnestedHash%s := a.%s.Value.Hash()\n", field.FieldName, field.FieldName)
-			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
-		} else if isFloatGoType(field.GoType) {
-			writeFloatHash(b, "\t\t", "v"+field.FieldName, "a."+field.FieldName+".Value")
-		} else {
-			// Nullable wrapper around primitive - format value
-			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s.Value)))\n", field.FieldName)
-		}
+		g.writeWrappedValueHash(b, field, "\t\t", "a."+field.FieldName+".Value", nestedHashCall)
 		fmt.Fprintf(b, "\t}\n")
 
 	case ir.FieldTypePointer:
@@ -389,13 +479,16 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		fmt.Fprintf(b, "\t// Hash pointer field: %s\n", field.FieldName)
 		fmt.Fprintf(b, "\tif a.%s != nil {\n", field.FieldName)
 		fmt.Fprintf(b, "\t\th.Write([]byte{1})\n")
-		if field.IsNested {
+		switch {
+		case field.IsNested:
 			// Pointer to a nested object - call Hash()
-			fmt.Fprintf(b, "\t\tnestedHash%s := a.%s.Hash()\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\tnestedHash%s := %s\n", field.FieldName, nestedHashCall("a."+field.FieldName))
 			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
-		} else if isFloatGoType(field.GoType) {
+		case field.IsRawJSON, field.IsDeepOnly:
+			fmt.Fprintf(b, "\t\t// Pointee excluded from the hash: its equality ignores representation details\n")
+		case isFloatGoType(field.GoType):
 			writeFloatHash(b, "\t\t", "v"+field.FieldName, "*a."+field.FieldName)
-		} else {
+		default:
 			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", *a.%s)))\n", field.FieldName)
 		}
 		fmt.Fprintf(b, "\t} else {\n")
@@ -403,6 +496,12 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		fmt.Fprintf(b, "\t}\n")
 
 	case ir.FieldTypeArray:
+		if field.IsArrayOfRaw || field.IsArrayOfDeep {
+			// Equal() compares these elements semantically, no element
+			// formatting is guaranteed stable across equal values
+			fmt.Fprintf(b, "\t// Array field %s is excluded from the hash: its elements compare semantically\n", field.FieldName)
+			return
+		}
 		// Hash array field
 		fmt.Fprintf(b, "\t// Hash array field: %s\n", field.FieldName)
 		fmt.Fprintf(b, "\tfor _, item := range a.%s {\n", field.FieldName)
@@ -415,7 +514,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 			fmt.Fprintf(b, "\t\t} else {\n")
 			fmt.Fprintf(b, "\t\t\th.Write([]byte{1})\n")
 			if field.IsArrayOfStructs {
-				fmt.Fprintf(b, "\t\t\tbinary.Write(h, binary.LittleEndian, item.Value.Hash())\n")
+				fmt.Fprintf(b, "\t\t\tbinary.Write(h, binary.LittleEndian, %s)\n", nestedHashCall("item.Value"))
 			} else if nullableWrapsFloat(elemGoType(field.GoType)) {
 				writeFloatHash(b, "\t\t\t", "v", "item.Value")
 			} else {
@@ -424,7 +523,7 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsArrayOfStructs:
 			// Struct elements provide their own equality-consistent Hash()
-			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, item.Hash())\n")
+			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, %s)\n", nestedHashCall("item"))
 		case isFloatGoType(elemGoType(field.GoType)):
 			writeFloatHash(b, "\t\t", "v", "item")
 		default:
@@ -442,10 +541,16 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 		fmt.Fprintf(b, "\tsort.Strings(keys%s)\n", field.FieldName)
 		fmt.Fprintf(b, "\tfor _, k := range keys%s {\n", field.FieldName)
 		fmt.Fprintf(b, "\t\th.Write([]byte(k))\n")
-		if field.IsMapOfStructs {
+		switch {
+		case field.IsMapOfStructs:
 			// Struct values provide their own equality-consistent Hash()
-			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, a.%s[k].Hash())\n", field.FieldName)
-		} else {
+			fmt.Fprintf(b, "\t\tbinary.Write(h, binary.LittleEndian, %s)\n", nestedHashCall(fmt.Sprintf("a.%s[k]", field.FieldName)))
+		case field.IsMapOfRaw, field.IsMapOfDeep:
+			// Values compare semantically, so only the keys feed the hash
+			fmt.Fprintf(b, "\t\t// Map values excluded from the hash: they compare semantically\n")
+		case isFloatGoType(mapValueGoType(field.GoType)):
+			writeFloatHash(b, "\t\t", "v", fmt.Sprintf("a.%s[k]", field.FieldName))
+		default:
 			fmt.Fprintf(b, "\t\th.Write([]byte(fmt.Sprintf(\"%%v\", a.%s[k])))\n", field.FieldName)
 		}
 		fmt.Fprintf(b, "\t}\n")
@@ -453,9 +558,39 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec) {
 	case ir.FieldTypeNestedObject:
 		// Hash nested object (incorporate its Hash() result)
 		fmt.Fprintf(b, "\t// Hash nested object: %s\n", field.FieldName)
-		fmt.Fprintf(b, "\tnestedHash%s := a.%s.Hash()\n", field.FieldName, field.FieldName)
+		fmt.Fprintf(b, "\tnestedHash%s := %s\n", field.FieldName, nestedHashCall("a."+field.FieldName))
 		fmt.Fprintf(b, "\tbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", field.FieldName)
 	}
+}
+
+// writeWrappedValueHash emits hashing code for the active value of an
+// Optional or Nullable wrapper
+func (g *Generator) writeWrappedValueHash(b *strings.Builder, field ir.FieldHashSpec, indent, expr string, nestedHashCall func(string) string) {
+	switch {
+	case field.IsNested:
+		// Wrapper around nested object - call Hash()
+		fmt.Fprintf(b, "%snestedHash%s := %s\n", indent, field.FieldName, nestedHashCall(expr))
+		fmt.Fprintf(b, "%sbinary.Write(h, binary.LittleEndian, nestedHash%s)\n", indent, field.FieldName)
+	case field.IsMap || field.IsArray || field.IsRawJSON || field.IsDeepOnly:
+		// Formatting a wrapped container or semantic value would expose
+		// representation details that Equal() ignores, such as inactive
+		// nested wrapper payloads, signed zero, or raw JSON bytes. The
+		// presence markers already written keep the hash discriminating
+		fmt.Fprintf(b, "%s// Wrapped value excluded from the hash: only its presence participates\n", indent)
+	case isFloatGoType(field.GoType):
+		writeFloatHash(b, indent, "v"+field.FieldName, expr)
+	default:
+		fmt.Fprintf(b, "%sh.Write([]byte(fmt.Sprintf(\"%%v\", %s)))\n", indent, expr)
+	}
+}
+
+// mapValueGoType returns the value type of a map Go type
+func mapValueGoType(goType string) string {
+	index := strings.Index(goType, "]")
+	if !strings.HasPrefix(goType, "map[") || index < 0 {
+		return ""
+	}
+	return goType[index+1:]
 }
 
 // writeFormattedCode formats and writes code to a file using FileSystem
@@ -489,12 +624,13 @@ func snakeCase(s string) string {
 }
 
 // writeMapComparison generates map comparison code
-func (g *Generator) writeMapComparison(b *strings.Builder, aMap, bMap, indent string, isMapOfStructs, hasDepth bool) {
+func (g *Generator) writeMapComparison(b *strings.Builder, aMap, bMap, indent string, field ir.FieldEqualitySpec, hasDepth bool) {
 	fmt.Fprintf(b, "%sif len(%s) != len(%s) {\n", indent, aMap, bMap)
 	fmt.Fprintf(b, "%s\treturn false\n", indent)
 	fmt.Fprintf(b, "%s}\n", indent)
 	fmt.Fprintf(b, "%sfor k, v := range %s {\n", indent, aMap)
-	if isMapOfStructs {
+	switch {
+	case field.IsMapOfStructs:
 		// Struct values - recurse through Equal() for semantic comparison
 		fmt.Fprintf(b, "%s\tbv, ok := %s[k]\n", indent, bMap)
 		fmt.Fprintf(b, "%s\tif !ok {\n", indent)
@@ -507,7 +643,19 @@ func (g *Generator) writeMapComparison(b *strings.Builder, aMap, bMap, indent st
 		}
 		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
 		fmt.Fprintf(b, "%s\t}\n", indent)
-	} else {
+	case field.IsMapOfRaw:
+		// Raw JSON values - compare semantically
+		fmt.Fprintf(b, "%s\tbv, ok := %s[k]\n", indent, bMap)
+		fmt.Fprintf(b, "%s\tif !ok || !validate.EqualRawJSON(v, bv) {\n", indent)
+		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
+		fmt.Fprintf(b, "%s\t}\n", indent)
+	case field.IsMapOfDeep:
+		// Values without == operator
+		fmt.Fprintf(b, "%s\tbv, ok := %s[k]\n", indent, bMap)
+		fmt.Fprintf(b, "%s\tif !ok || !reflect.DeepEqual(v, bv) {\n", indent)
+		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
+		fmt.Fprintf(b, "%s\t}\n", indent)
+	default:
 		// Primitive values - direct comparison
 		fmt.Fprintf(b, "%s\tif bv, ok := %s[k]; !ok || v != bv {\n", indent, bMap)
 		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
@@ -516,22 +664,30 @@ func (g *Generator) writeMapComparison(b *strings.Builder, aMap, bMap, indent st
 	fmt.Fprintf(b, "%s}\n", indent)
 }
 
-// writeArrayComparison generates array comparison code
-func (g *Generator) writeArrayComparison(b *strings.Builder, aArray, bArray, indent string, isArrayOfStructs, hasDepth bool) {
-	g.writeArrayComparisonWithNullable(b, aArray, bArray, indent, isArrayOfStructs, false, hasDepth)
-}
-
 // writeArrayComparisonWithNullable generates array comparison code with nullable support
 func (g *Generator) writeArrayComparisonWithNullable(
 	b *strings.Builder, aArray, bArray, indent string,
-	isArrayOfStructs, isArrayOfNullable, hasDepth bool,
+	field ir.FieldEqualitySpec, hasDepth bool,
 ) {
+	isArrayOfStructs := field.IsArrayOfStructs
+	if field.IsArrayOfDeep {
+		// Elements have no == operator and no generated Equal method
+		fmt.Fprintf(b, "%sif !reflect.DeepEqual(%s, %s) {\n", indent, aArray, bArray)
+		fmt.Fprintf(b, "%s\treturn false\n", indent)
+		fmt.Fprintf(b, "%s}\n", indent)
+		return
+	}
 	fmt.Fprintf(b, "%sif len(%s) != len(%s) {\n", indent, aArray, bArray)
 	fmt.Fprintf(b, "%s\treturn false\n", indent)
 	fmt.Fprintf(b, "%s}\n", indent)
 	fmt.Fprintf(b, "%sfor i := range %s {\n", indent, aArray)
 	switch {
-	case isArrayOfNullable:
+	case field.IsArrayOfRaw:
+		// Raw JSON elements - compare semantically
+		fmt.Fprintf(b, "%s\tif !validate.EqualRawJSON(%s[i], %s[i]) {\n", indent, aArray, bArray)
+		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
+		fmt.Fprintf(b, "%s\t}\n", indent)
+	case field.IsArrayOfNullable:
 		// Nullable wrapper elements - compare Null flag then Value
 		fmt.Fprintf(b, "%s\tif %s[i].Null != %s[i].Null {\n", indent, aArray, bArray)
 		fmt.Fprintf(b, "%s\t\treturn false\n", indent)

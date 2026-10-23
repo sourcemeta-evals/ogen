@@ -6,11 +6,21 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for WorkflowStatus using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a WorkflowStatus) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a WorkflowStatus) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "WorkflowStatus",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash primitive field: ID
@@ -27,7 +37,7 @@ func (a WorkflowStatus) Hash() uint64 {
 	// Hash optional field: Properties
 	if a.Properties.Set {
 		h.Write([]byte{1})
-		nestedHashProperties := a.Properties.Value.Hash()
+		nestedHashProperties := a.Properties.Value.Hash(depth + 1)
 		binary.Write(h, binary.LittleEndian, nestedHashProperties)
 	} else {
 		h.Write([]byte{0})

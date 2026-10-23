@@ -4,7 +4,7 @@ This directory contains comprehensive tests and examples for complex `uniqueItem
 
 ## Overview
 
-Previously, ogen only supported `uniqueItems: true` on arrays of primitive types (strings, numbers, etc.). This implementation adds support for complex objects (structs) by generating `Equal()` and `Hash()` methods and using hash-based duplicate detection.
+Previously, ogen only supported `uniqueItems: true` on arrays of primitive types (strings, numbers, etc.). This implementation adds support for every remaining item shape: struct items get generated `Equal()` and `Hash()` methods with hash-based duplicate detection, free-form items are compared as JSON values, and the remaining shapes (nested arrays, map-only objects, nullable objects) use a reflect-based pairwise helper.
 
 ### Motivation
 
@@ -49,7 +49,14 @@ func (a WorkflowStatus) Equal(b WorkflowStatus, depth int) bool {
 For performance, each type also gets a `Hash()` method using FNV-1a:
 
 ```go
-func (a WorkflowStatus) Hash() uint64 {
+func (a WorkflowStatus) Hash(depth int) uint64 {
+    if depth > 10 {
+        panic(&validate.DepthLimitError{
+            MaxDepth: 10,
+            TypeName: "WorkflowStatus",
+        })
+    }
+
     h := fnv.New64a()
 
     h.Write([]byte(fmt.Sprintf("%v", a.ID)))
@@ -57,7 +64,7 @@ func (a WorkflowStatus) Hash() uint64 {
 
     if a.Properties.Set {
         h.Write([]byte{1})
-        nestedHash := a.Properties.Value.Hash()
+        nestedHash := a.Properties.Value.Hash(depth + 1)
         binary.Write(h, binary.LittleEndian, nestedHash)
     } else {
         h.Write([]byte{0})
@@ -68,9 +75,13 @@ func (a WorkflowStatus) Hash() uint64 {
 ```
 
 **Properties:**
-- Equal objects **must** produce equal hashes
+- Equal objects **must** produce equal hashes: fields whose equality ignores
+  representation details (raw JSON, reflect-compared collections, inactive
+  wrapper payloads, signed zero) are excluded from the hash, and collisions
+  are resolved by `Equal()`
 - Fast hash computation for O(n) duplicate detection
-- Handles all field types consistently
+- Enforces the same depth limit as `Equal()`, so unbounded recursion cannot
+  overflow the stack before the recovery in the validator runs
 
 ### 3. Runtime Validation
 
@@ -102,7 +113,7 @@ func validateUniqueWorkflowStatus(items []WorkflowStatus) (err error) {
 
     // O(n) duplicate detection
     for i, item := range items {
-        hash := item.Hash()
+        hash := item.Hash(0)
         bucket := buckets[hash]
 
         // Check for duplicates in this hash bucket
@@ -126,6 +137,22 @@ func validateUniqueWorkflowStatus(items []WorkflowStatus) (err error) {
 - Hash collisions resolved by calling `Equal()`
 - Returns indices of duplicate items for debugging
 - Catches and returns depth limit errors
+
+### 4. Fallback Strategies
+
+Item shapes without generated methods still validate:
+
+| Item shape | Strategy |
+|------------|----------|
+| Objects with properties | Generated `Equal()`/`Hash()` + hash buckets |
+| Comparable primitives | `validate.UniqueItems` (the `==` operator) |
+| Free-form values (`items: {}`) | `validate.UniqueItemsRawJSON`, semantic JSON comparison |
+| Nested arrays, map-only objects, nullable objects | `validate.UniqueItemsDeep`, pairwise `reflect.DeepEqual` |
+
+Raw JSON comparison ignores object member order, insignificant whitespace,
+string escaping and numeric notation, and compares numbers exactly through
+`math/big` so adjacent large integers stay distinct. The pairwise fallbacks
+are O(n²) in the worst case; struct items keep the O(n) hash-bucket path.
 
 ## Examples
 
@@ -165,6 +192,12 @@ See `all-field-types.yaml` - comprehensive test with 18 field types:
 - Maps (additionalProperties)
 - Nested objects (multiple levels)
 
+### Nested Collections and Fallbacks
+
+See `nested-collections.yaml` - exercises every fallback item shape plus
+struct items with nested collection, raw JSON and float map fields, and an
+anonymous request body array of objects.
+
 ### Real-World JIRA API
 
 See `jira-subset.yaml` - minimal JIRA API v3 subset:
@@ -173,7 +206,7 @@ See `jira-subset.yaml` - minimal JIRA API v3 subset:
 
 ## Test Coverage
 
-**38 tests passing** across 5 test suites:
+Six test suites cover the feature:
 
 ### Suite 1: Basic Tests (16 tests)
 - Empty arrays
@@ -208,6 +241,13 @@ See `jira-subset.yaml` - minimal JIRA API v3 subset:
 - Real-world JIRA patterns
 - Multiple uniqueItems arrays
 - Complete request validation
+
+### Suite 6: Nested Collections Tests
+- Arrays of arrays, map-only objects, nullable objects, free-form values
+- Raw JSON fields: reordered keys, whitespace, large integers
+- Signed zero in float maps
+- Hash coherence for inactive nullable payloads
+- Anonymous operation body arrays
 
 ## Performance
 
@@ -252,6 +292,7 @@ type DepthLimitError struct {
 
 ### Core Generation
 - `gen/ir/equality.go` - IR types for equality specs
+- `gen/ir/unique_items.go` - validation strategy dispatch per item shape
 - `gen/gen_equality_detect.go` - Type collection and traversal
 - `gen/gen_equality.go` - Equal() and Hash() generation
 - `gen/gen_validators_unique.go` - validateUnique() generation
@@ -259,6 +300,7 @@ type DepthLimitError struct {
 
 ### Validation
 - `validate/errors.go` - Error types (DuplicateItemsError, DepthLimitError)
+- `validate/unique_complex.go` - reflect and raw JSON fallback helpers
 
 ### Tests
 - `generated/` - Basic tests with 2-level nesting
@@ -266,12 +308,13 @@ type DepthLimitError struct {
 - `generated-integration/` - All field types combined
 - `generated-golden/` - Regression tests
 - `generated-jira/` - Real-world JIRA patterns
+- `generated-nested/` - Fallback item shapes and semantic field comparison
 
 ## Limitations
 
-1. **Depth Limit**: Default maximum depth is 10 to prevent stack overflow
-2. **Hash Collisions**: Possible but rare; resolved by Equal() verification
-3. **Performance**: O(n) for typical cases, worst-case O(n²) if all items hash to same value (extremely unlikely with FNV-1a)
+1. **Depth Limit**: Default maximum depth is 10, enforced by both `Equal()` and `Hash()`, so deeply nested or cyclic values return `DepthLimitError` instead of overflowing the stack
+2. **Hash Collisions**: Possible by design; resolved by Equal() verification
+3. **Performance**: O(n) for struct items in typical cases; the reflect and raw JSON fallback helpers compare pairwise, which is O(n²) in the array length
 
 ## Future Improvements
 

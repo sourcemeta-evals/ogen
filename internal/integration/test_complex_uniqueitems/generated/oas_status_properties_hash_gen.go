@@ -5,11 +5,21 @@ package api
 import (
 	"fmt"
 	"hash/fnv"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
 // Hash computes a hash value for StatusProperties using FNV-1a.
 // Equal objects must produce equal hashes.
-func (a StatusProperties) Hash() uint64 {
+// The depth parameter prevents infinite recursion on nested objects.
+func (a StatusProperties) Hash(depth int) uint64 {
+	if depth > 10 {
+		panic(&validate.DepthLimitError{
+			MaxDepth: 10,
+			TypeName: "StatusProperties",
+		})
+	}
+
 	h := fnv.New64a()
 
 	// Hash optional field: Category

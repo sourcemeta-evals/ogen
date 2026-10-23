@@ -29,7 +29,7 @@ func validateUniqueIssueTypesWorkflowMapping(items []IssueTypesWorkflowMapping) 
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {
@@ -69,7 +69,7 @@ func validateUniqueWorkflowTransitionRule(items []WorkflowTransitionRule) (err e
 	buckets := make(map[uint64][]entry, len(items))
 
 	for i, item := range items {
-		hash := item.Hash()
+		hash := item.Hash(0)
 		bucket := buckets[hash]
 
 		for _, existing := range bucket {

@@ -32,7 +32,7 @@ func TestWorkflowStatus_PrimitiveFields(t *testing.T) {
 	}
 
 	// Equal items should have equal hashes
-	if item1.Hash() != item2.Hash() {
+	if item1.Hash(0) != item2.Hash(0) {
 		t.Error("Equal items should have equal hashes")
 	}
 }
@@ -328,8 +328,8 @@ func TestWorkflowStatus_HashConsistencyAllFieldTypes(t *testing.T) {
 		}),
 	}
 
-	hash1 := item.Hash()
-	hash2 := item.Hash()
+	hash1 := item.Hash(0)
+	hash2 := item.Hash(0)
 
 	// Same object should produce same hash
 	if hash1 != hash2 {
@@ -339,13 +339,13 @@ func TestWorkflowStatus_HashConsistencyAllFieldTypes(t *testing.T) {
 	// Verify hash uses all fields
 	itemDifferentID := item
 	itemDifferentID.ID = "different-id"
-	if itemDifferentID.Hash() == hash1 {
+	if itemDifferentID.Hash(0) == hash1 {
 		t.Error("Changing ID should change hash")
 	}
 
 	itemDifferentNested := item
 	itemDifferentNested.Properties.Value.Color = NewOptString("blue")
-	if itemDifferentNested.Hash() == hash1 {
+	if itemDifferentNested.Hash(0) == hash1 {
 		t.Error("Changing nested field should change hash")
 	}
 }

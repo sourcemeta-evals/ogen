@@ -204,9 +204,9 @@ func TestValidateUniqueWorkflowStatus_HashCollisionHandling(t *testing.T) {
 	}
 
 	// Verify hashes are computed correctly
-	hash1 := item1.Hash()
-	hash2 := item2.Hash()
-	hash3 := item3.Hash()
+	hash1 := item1.Hash(0)
+	hash2 := item2.Hash(0)
+	hash3 := item3.Hash(0)
 
 	t.Logf("Hash1: %d, Hash2: %d, Hash3: %d", hash1, hash2, hash3)
 

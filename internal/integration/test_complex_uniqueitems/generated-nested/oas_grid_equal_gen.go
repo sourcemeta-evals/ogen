@@ -2,11 +2,7 @@
 
 package api
 
-import (
-	"reflect"
-
-	"github.com/ogen-go/ogen/validate"
-)
+import "github.com/ogen-go/ogen/validate"
 
 // Equal compares two Grid instances for equality.
 // The depth parameter prevents infinite recursion on nested objects.
@@ -22,7 +18,7 @@ func (a Grid) Equal(b Grid, depth int) bool {
 		return false
 	}
 	// Compare array field: Matrix
-	if !reflect.DeepEqual(a.Matrix, b.Matrix) {
+	if !validate.EqualDeep(a.Matrix, b.Matrix) {
 		return false
 	}
 	// Compare optional field: LabelsByGroup
@@ -35,7 +31,7 @@ func (a Grid) Equal(b Grid, depth int) bool {
 		}
 		for k, v := range a.LabelsByGroup.Value {
 			bv, ok := b.LabelsByGroup.Value[k]
-			if !ok || !reflect.DeepEqual(v, bv) {
+			if !ok || !validate.EqualDeep(v, bv) {
 				return false
 			}
 		}
@@ -69,7 +65,7 @@ func (a Grid) Equal(b Grid, depth int) bool {
 	}
 	for k, v := range a.Attachments {
 		bv, ok := b.Attachments[k]
-		if !ok || !reflect.DeepEqual(v, bv) {
+		if !ok || !validate.EqualDeep(v, bv) {
 			return false
 		}
 	}

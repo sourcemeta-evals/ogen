@@ -12,10 +12,19 @@ const (
 	// UniqueItemsComparable selects the comparable helper for items the ==
 	// operator compares correctly.
 	UniqueItemsComparable = "comparable"
-	// UniqueItemsDeep selects the reflect-based helper for the remaining
-	// item shapes, such as nested arrays, maps and nullable wrappers.
+	// UniqueItemsDeep selects the semantic deep comparison helper for the
+	// remaining item shapes, such as nested arrays, maps and nullable
+	// wrappers.
 	UniqueItemsDeep = "deep"
 )
+
+// unaliased resolves alias chains to the underlying type.
+func unaliased(t *Type) *Type {
+	for t.Kind == KindAlias && t.AliasTo != nil {
+		t = t.AliasTo
+	}
+	return t
+}
 
 // UniqueItemsDispatch returns the duplicate detection strategy for a
 // uniqueItems array type.
@@ -27,7 +36,9 @@ func (t *Type) UniqueItemsDispatch() string {
 	switch {
 	case item.Is(KindStruct):
 		return UniqueItemsGenerated
-	case item.Is(KindAny):
+	case unaliased(item).Is(KindAny):
+		// Aliases of free-form schemas are named raw JSON types, which the
+		// generic raw helper accepts through its ~[]byte constraint
 		return UniqueItemsRaw
 	case ComparableWithOperator(item):
 		return UniqueItemsComparable

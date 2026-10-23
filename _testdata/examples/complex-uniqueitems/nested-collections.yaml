@@ -9,6 +9,8 @@ info:
     - Arrays of map-only objects (additionalProperties)
     - Arrays of nullable objects
     - Arrays of free-form values (no item schema)
+    - Arrays of referenced free-form schemas (named raw JSON aliases)
+    - Arrays of arrays and maps whose values are free-form
     - Anonymous operation body arrays of objects
     - Object items with nested collection, raw JSON and float map fields
 
@@ -95,10 +97,28 @@ components:
             properties:
               id:
                 type: string
+              extra: {}
         anything:
           type: array
           uniqueItems: true
           items: {}
+        freeMatrix:
+          type: array
+          uniqueItems: true
+          items:
+            type: array
+            items: {}
+        freeTagsets:
+          type: array
+          uniqueItems: true
+          items:
+            type: object
+            additionalProperties: {}
+        annotations:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/FreeForm'
         records:
           type: array
           uniqueItems: true
@@ -178,3 +198,4 @@ components:
           type: integer
         label:
           type: string
+    FreeForm: {}

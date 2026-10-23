@@ -10,7 +10,7 @@ import (
 )
 
 // UniqueItemsDeep ensures given array has no duplicates, comparing elements
-// with reflect.DeepEqual.
+// with EqualDeep.
 //
 // It is used for uniqueItems arrays whose element type is not comparable
 // with == and has no generated Equal method, such as nested arrays, maps
@@ -21,12 +21,119 @@ func UniqueItemsDeep[S ~[]T, T any](arr S) error {
 	}
 	for i := range arr {
 		for j := i + 1; j < len(arr); j++ {
-			if reflect.DeepEqual(arr[i], arr[j]) {
+			if EqualDeep(arr[i], arr[j]) {
 				return &DuplicateItemsError{Indices: []int{i, j}}
 			}
 		}
 	}
 	return nil
+}
+
+// EqualDeep reports whether two values of the same type are deeply equal,
+// comparing raw JSON payloads semantically instead of byte by byte.
+//
+// It matches reflect.DeepEqual, including the distinction between nil and
+// empty slices and maps, except that jx.Raw values (and named types whose
+// underlying type is a raw JSON byte slice) compare through EqualRawJSON,
+// and types with an Equal method of the form Equal(T) bool delegate to it,
+// so generated struct items, time.Time and decimal values compare by value.
+func EqualDeep[T any](a, b T) bool {
+	return equalDeepValue(reflect.ValueOf(a), reflect.ValueOf(b))
+}
+
+var (
+	rawJSONReflectType   = reflect.TypeOf(jx.Raw(nil))
+	byteSliceReflectType = reflect.TypeOf([]byte(nil))
+	boolReflectType      = reflect.TypeOf(false)
+)
+
+// isRawJSONReflectType reports whether a reflect type holds raw JSON bytes:
+// jx.Raw itself, or a defined byte-slice type such as a generated alias of a
+// free-form schema. Plain []byte stays bytewise, because it carries decoded
+// binary data, not JSON.
+func isRawJSONReflectType(t reflect.Type) bool {
+	if t == rawJSONReflectType {
+		return true
+	}
+	return t != byteSliceReflectType &&
+		t.Kind() == reflect.Slice &&
+		t.Elem().Kind() == reflect.Uint8 &&
+		t.ConvertibleTo(rawJSONReflectType)
+}
+
+func equalDeepValue(a, b reflect.Value) bool {
+	if !a.IsValid() || !b.IsValid() {
+		return a.IsValid() == b.IsValid()
+	}
+	t := a.Type()
+	if t != b.Type() {
+		return false
+	}
+	if isRawJSONReflectType(t) {
+		return EqualRawJSON(jx.Raw(a.Bytes()), jx.Raw(b.Bytes()))
+	}
+	if method, ok := t.MethodByName("Equal"); ok &&
+		method.Type.NumIn() == 2 && method.Type.In(1) == t &&
+		method.Type.NumOut() == 1 && method.Type.Out(0) == boolReflectType {
+		return method.Func.Call([]reflect.Value{a, b})[0].Bool()
+	}
+	switch t.Kind() {
+	case reflect.Pointer:
+		if a.IsNil() || b.IsNil() {
+			return a.IsNil() == b.IsNil()
+		}
+		return equalDeepValue(a.Elem(), b.Elem())
+	case reflect.Interface:
+		if a.IsNil() || b.IsNil() {
+			return a.IsNil() == b.IsNil()
+		}
+		return equalDeepValue(a.Elem(), b.Elem())
+	case reflect.Slice:
+		if a.IsNil() != b.IsNil() || a.Len() != b.Len() {
+			return false
+		}
+		for i := 0; i < a.Len(); i++ {
+			if !equalDeepValue(a.Index(i), b.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Array:
+		for i := 0; i < a.Len(); i++ {
+			if !equalDeepValue(a.Index(i), b.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Map:
+		if a.IsNil() != b.IsNil() || a.Len() != b.Len() {
+			return false
+		}
+		iter := a.MapRange()
+		for iter.Next() {
+			bval := b.MapIndex(iter.Key())
+			if !bval.IsValid() || !equalDeepValue(iter.Value(), bval) {
+				return false
+			}
+		}
+		return true
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			// Unexported fields cannot be read through reflection
+			// without unsafe, so compare the whole struct bytewise
+			if t.Field(i).PkgPath != "" {
+				return reflect.DeepEqual(a.Interface(), b.Interface())
+			}
+		}
+		for i := 0; i < t.NumField(); i++ {
+			if !equalDeepValue(a.Field(i), b.Field(i)) {
+				return false
+			}
+		}
+		return true
+	default:
+		return reflect.DeepEqual(a.Interface(), b.Interface())
+	}
 }
 
 // UniqueItemsRawJSON ensures given array of raw JSON values has no
@@ -48,8 +155,9 @@ func UniqueItemsRawJSON[S ~[]T, T ~[]byte](arr S) error {
 // EqualRawJSON reports whether two raw JSON values are semantically equal:
 // object member order, insignificant whitespace, string escaping and
 // equivalent numeric notation do not affect the result. Numbers are compared
-// exactly, without losing precision to a float64 round-trip. Malformed input
-// falls back to byte comparison.
+// exactly for any magnitude, without losing precision to a float64 round-trip
+// and without parser range limits on the exponent. Malformed input falls back
+// to byte comparison.
 func EqualRawJSON(a, b jx.Raw) bool {
 	equal, err := rawJSONEqual(a, b)
 	if err != nil {
@@ -141,14 +249,78 @@ func equalJSONNumber(left, right *jx.Decoder) (bool, error) {
 		// bytes also differ as numbers.
 		return false, nil
 	}
-	lnum, rnum := new(big.Rat), new(big.Rat)
-	if err := lnum.UnmarshalText(lval); err != nil {
+	lneg, ldigits, lexp, err := normalizeNumberLiteral(lval)
+	if err != nil {
 		return false, errors.Wrap(err, "left")
 	}
-	if err := rnum.UnmarshalText(rval); err != nil {
+	rneg, rdigits, rexp, err := normalizeNumberLiteral(rval)
+	if err != nil {
 		return false, errors.Wrap(err, "right")
 	}
-	return lnum.Cmp(rnum) == 0, nil
+	if ldigits == "" || rdigits == "" {
+		// Zero in any notation equals zero, regardless of sign or exponent
+		return ldigits == rdigits, nil
+	}
+	return lneg == rneg && ldigits == rdigits && lexp.Cmp(rexp) == 0, nil
+}
+
+// normalizeNumberLiteral decomposes a JSON number literal into a sign, its
+// significant digits and a decimal exponent, so that the value equals
+// digits * 10^exponent with the decimal point after the last digit. The
+// exponent is a big.Int, so arbitrarily large exponents normalize without
+// overflow, unlike parsers that expand the value or use machine integers.
+// A zero value yields empty digits.
+func normalizeNumberLiteral(literal []byte) (negative bool, digits string, exponent *big.Int, _ error) {
+	rest := literal
+	if len(rest) > 0 && rest[0] == '-' {
+		negative = true
+		rest = rest[1:]
+	}
+	takeDigits := func() string {
+		i := 0
+		for i < len(rest) && rest[i] >= '0' && rest[i] <= '9' {
+			i++
+		}
+		taken := string(rest[:i])
+		rest = rest[i:]
+		return taken
+	}
+	integer := takeDigits()
+	if integer == "" {
+		return false, "", nil, errors.Errorf("invalid number literal %q", literal)
+	}
+	fraction := ""
+	if len(rest) > 0 && rest[0] == '.' {
+		rest = rest[1:]
+		fraction = takeDigits()
+		if fraction == "" {
+			return false, "", nil, errors.Errorf("invalid number literal %q", literal)
+		}
+	}
+	exponent = new(big.Int)
+	if len(rest) > 0 && (rest[0] == 'e' || rest[0] == 'E') {
+		rest = rest[1:]
+		if _, ok := exponent.SetString(string(rest), 10); !ok {
+			return false, "", nil, errors.Errorf("invalid number literal %q", literal)
+		}
+		rest = nil
+	}
+	if len(rest) > 0 {
+		return false, "", nil, errors.Errorf("invalid number literal %q", literal)
+	}
+
+	mantissa := integer + fraction
+	exponent.Sub(exponent, big.NewInt(int64(len(fraction))))
+	start := 0
+	for start < len(mantissa) && mantissa[start] == '0' {
+		start++
+	}
+	end := len(mantissa)
+	for end > start && mantissa[end-1] == '0' {
+		end--
+	}
+	exponent.Add(exponent, big.NewInt(int64(len(mantissa)-end)))
+	return negative, mantissa[start:end], exponent, nil
 }
 
 func equalJSONArray(left, right *jx.Decoder) (bool, error) {

@@ -160,6 +160,89 @@ func (s *Collection) Validate() error {
 		})
 	}
 	if err := func() error {
+		if s.FreeMatrix == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.FreeMatrix)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItemsDeep(s.FreeMatrix); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.FreeMatrix {
+			if err := func() error {
+				if elem == nil {
+					return errors.New("nil is invalid value")
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "freeMatrix",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.FreeTagsets == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.FreeTagsets)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItemsDeep(s.FreeTagsets); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "freeTagsets",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Annotations == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Annotations)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItemsRawJSON(s.Annotations); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "annotations",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Records == nil {
 			return nil // optional
 		}

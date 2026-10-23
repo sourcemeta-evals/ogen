@@ -24,6 +24,12 @@ func TestEqualRawJSON(t *testing.T) {
 		{Name: "SignedZero", Left: `-0`, Right: `0`, Equal: true},
 		{Name: "LargeIntegersDistinct", Left: `9007199254740992`, Right: `9007199254740993`, Equal: false},
 		{Name: "LargeIntegerExponent", Left: `9007199254740992`, Right: `9.007199254740992e15`, Equal: true},
+		{Name: "HugeExponentEquivalent", Left: `1e99999999999999999999`, Right: `10e99999999999999999998`, Equal: true},
+		{Name: "HugeExponentDistinct", Left: `1e99999999999999999999`, Right: `1.1e99999999999999999999`, Equal: false},
+		{Name: "HugeNegativeExponentEquivalent", Left: `1e-99999999999999999999`, Right: `0.1e-99999999999999999998`, Equal: true},
+		{Name: "Int64BoundaryExponentEquivalent", Left: `1e9223372036854775808`, Right: `1.0e9223372036854775808`, Equal: true},
+		{Name: "Int64WrapDistinct", Left: `10e9223372036854775807`, Right: `1e-9223372036854775808`, Equal: false},
+		{Name: "ZeroWithHugeExponent", Left: `0e99999999999999999999`, Right: `0`, Equal: true},
 		{Name: "NestedReorderedMembers", Left: `{"a":{"x":1,"y":[2,3]}}`, Right: `{"a":{"y":[2,3],"x":1}}`, Equal: true},
 		{Name: "ArrayOrderSignificant", Left: `[1,2]`, Right: `[2,1]`, Equal: false},
 		{Name: "NullThenDifferentElement", Left: `[null,1]`, Right: `[null,2]`, Equal: false},
@@ -91,4 +97,110 @@ func TestUniqueItemsDeep(t *testing.T) {
 		require.NoError(t, UniqueItemsDeep([][]string(nil)))
 		require.NoError(t, UniqueItemsDeep([][]string{{"a"}}))
 	})
+}
+
+type namedRaw jx.Raw
+
+type equalMethodValue struct {
+	ID    string
+	Extra jx.Raw
+}
+
+func (a equalMethodValue) Equal(b equalMethodValue) bool {
+	return a.ID == b.ID && EqualRawJSON(a.Extra, b.Extra)
+}
+
+func TestEqualDeep(t *testing.T) {
+	t.Run("NestedRawArrays", func(t *testing.T) {
+		require.True(t, EqualDeep(
+			[]jx.Raw{jx.Raw(`{"a":1,"b":2}`)},
+			[]jx.Raw{jx.Raw(`{"b":2,"a":1}`)},
+		))
+		require.False(t, EqualDeep(
+			[]jx.Raw{jx.Raw(`{"a":1}`)},
+			[]jx.Raw{jx.Raw(`{"a":2}`)},
+		))
+	})
+	t.Run("NestedRawMaps", func(t *testing.T) {
+		require.True(t, EqualDeep(
+			map[string]jx.Raw{"k": jx.Raw(`"A"`)},
+			map[string]jx.Raw{"k": jx.Raw(`"A"`)},
+		))
+		require.False(t, EqualDeep(
+			map[string]jx.Raw{"k": jx.Raw(`1`)},
+			map[string]jx.Raw{"k": jx.Raw(`2`)},
+		))
+	})
+	t.Run("NamedRawType", func(t *testing.T) {
+		require.True(t, EqualDeep(
+			[]namedRaw{namedRaw(`{"a":1,"b":2}`)},
+			[]namedRaw{namedRaw(`{"b":2,"a":1}`)},
+		))
+	})
+	t.Run("PlainByteSliceStaysBytewise", func(t *testing.T) {
+		require.False(t, EqualDeep(
+			[][]byte{[]byte(`{"a":1}`)},
+			[][]byte{[]byte(`{ "a":1 }`)},
+		))
+		require.True(t, EqualDeep(
+			[][]byte{[]byte{0x01, 0x02}},
+			[][]byte{[]byte{0x01, 0x02}},
+		))
+	})
+	t.Run("EqualMethodDispatch", func(t *testing.T) {
+		require.True(t, EqualDeep(
+			equalMethodValue{ID: "x", Extra: jx.Raw(`{"a":1,"b":2}`)},
+			equalMethodValue{ID: "x", Extra: jx.Raw(`{"b":2,"a":1}`)},
+		))
+		require.False(t, EqualDeep(
+			equalMethodValue{ID: "x", Extra: jx.Raw(`1`)},
+			equalMethodValue{ID: "y", Extra: jx.Raw(`1`)},
+		))
+	})
+	t.Run("StructFieldRecursion", func(t *testing.T) {
+		type wrapper struct {
+			Value equalMethodValue
+			Null  bool
+		}
+		require.True(t, EqualDeep(
+			wrapper{Value: equalMethodValue{ID: "x", Extra: jx.Raw(`[1, 2]`)}},
+			wrapper{Value: equalMethodValue{ID: "x", Extra: jx.Raw(`[1,2]`)}},
+		))
+		require.False(t, EqualDeep(
+			wrapper{Null: true},
+			wrapper{Null: false},
+		))
+	})
+	t.Run("NilVersusEmpty", func(t *testing.T) {
+		require.False(t, EqualDeep([]string(nil), []string{}))
+		require.False(t, EqualDeep(map[string]string(nil), map[string]string{}))
+		require.True(t, EqualDeep([]string(nil), []string(nil)))
+	})
+	t.Run("Pointers", func(t *testing.T) {
+		one, alsoOne, two := 1, 1, 2
+		require.True(t, EqualDeep(&one, &alsoOne))
+		require.False(t, EqualDeep(&one, &two))
+		require.False(t, EqualDeep(&one, nil))
+	})
+}
+
+func TestUniqueItemsDeepNestedRaw(t *testing.T) {
+	err := UniqueItemsDeep([]map[string]jx.Raw{
+		{"a": jx.Raw(`1`), "b": jx.Raw(`{"x":1,"y":2}`)},
+		{"a": jx.Raw(`2`), "b": jx.Raw(`{"x":1,"y":2}`)},
+		{"b": jx.Raw(`{ "y": 2, "x": 1 }`), "a": jx.Raw(`1`)},
+	})
+	require.Error(t, err)
+	var duplicateErr *DuplicateItemsError
+	require.ErrorAs(t, err, &duplicateErr)
+	require.Equal(t, []int{0, 2}, duplicateErr.Indices)
+
+	require.NoError(t, UniqueItemsDeep([][]jx.Raw{
+		{jx.Raw(`9007199254740992`)},
+		{jx.Raw(`9007199254740993`)},
+	}))
+	require.Error(t, UniqueItemsDeep([][]jx.Raw{
+		{jx.Raw(`100`)},
+		{jx.Raw(`1e2`)},
+	}))
 }

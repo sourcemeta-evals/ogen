@@ -251,3 +251,85 @@ func TestValidateUniqueGrid_LinkByValue(t *testing.T) {
 	}
 	requireNoError(t, validateUniqueGrid([]Grid{left, {ID: "g", Link: NewOptURI(*other)}}), "different URLs")
 }
+
+// Free-form values nested inside array items compare as JSON values even
+// when the enclosing item shape uses the deep comparison fallback.
+func TestValidateUniqueCollection_FreeMatrix(t *testing.T) {
+	collection := Collection{FreeMatrix: [][]jx.Raw{
+		{jx.Raw(`{"a":1,"b":2}`)},
+		{jx.Raw(`{ "b":2, "a":1 }`)},
+	}}
+	requireDuplicateError(t, collection.Validate(), "reordered nested raw objects")
+
+	collection = Collection{FreeMatrix: [][]jx.Raw{
+		{jx.Raw(`100`)},
+		{jx.Raw(`1e2`)},
+	}}
+	requireDuplicateError(t, collection.Validate(), "equivalent nested raw numbers")
+
+	collection = Collection{FreeMatrix: [][]jx.Raw{
+		{jx.Raw(`9007199254740992`)},
+		{jx.Raw(`9007199254740993`)},
+	}}
+	requireNoError(t, collection.Validate(), "adjacent large integers stay distinct")
+
+	collection = Collection{FreeMatrix: [][]jx.Raw{
+		{jx.Raw(`1`), jx.Raw(`2`)},
+		{jx.Raw(`2`), jx.Raw(`1`)},
+	}}
+	requireNoError(t, collection.Validate(), "element order is significant")
+}
+
+// Free-form additionalProperties values inside map-only items compare as
+// JSON values.
+func TestValidateUniqueCollection_FreeTagsets(t *testing.T) {
+	collection := Collection{FreeTagsets: []CollectionFreeTagsetsItem{
+		{"k": jx.Raw(`"A"`)},
+		{"k": jx.Raw(`"A"`)},
+	}}
+	requireDuplicateError(t, collection.Validate(), "escaped string values")
+
+	collection = Collection{FreeTagsets: []CollectionFreeTagsetsItem{
+		{"k": jx.Raw(`"A"`)},
+		{"k": jx.Raw(`"B"`)},
+	}}
+	requireNoError(t, collection.Validate(), "distinct string values")
+}
+
+// Referenced free-form schemas become named raw types and still compare as
+// JSON values.
+func TestValidateUniqueCollection_Annotations(t *testing.T) {
+	collection := Collection{Annotations: []FreeForm{
+		FreeForm(`{"note":"x","level":1}`),
+		FreeForm(`{"level":1,"note":"x"}`),
+	}}
+	requireDuplicateError(t, collection.Validate(), "reordered aliased raw objects")
+
+	collection = Collection{Annotations: []FreeForm{
+		FreeForm(`{"note":"x"}`),
+		FreeForm(`{"note":"y"}`),
+	}}
+	requireNoError(t, collection.Validate(), "distinct aliased raw objects")
+}
+
+// Raw fields inside nullable items must stay semantic through the deep
+// comparison of the wrapper.
+func TestValidateUniqueCollection_MaybesRawExtra(t *testing.T) {
+	first := NewNilCollectionMaybesItem(CollectionMaybesItem{
+		ID:    NewOptString("x"),
+		Extra: jx.Raw(`{"a":1,"b":2}`),
+	})
+	reordered := NewNilCollectionMaybesItem(CollectionMaybesItem{
+		ID:    NewOptString("x"),
+		Extra: jx.Raw(`{"b":2,"a":1}`),
+	})
+	collection := Collection{Maybes: []NilCollectionMaybesItem{first, reordered}}
+	requireDuplicateError(t, collection.Validate(), "reordered raw extras")
+
+	different := NewNilCollectionMaybesItem(CollectionMaybesItem{
+		ID:    NewOptString("x"),
+		Extra: jx.Raw(`{"a":1,"b":3}`),
+	})
+	collection = Collection{Maybes: []NilCollectionMaybesItem{first, different}}
+	requireNoError(t, collection.Validate(), "different raw extras")
+}

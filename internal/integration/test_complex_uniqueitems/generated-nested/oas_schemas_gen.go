@@ -49,12 +49,15 @@ func (s *AddGridBatchReqItem) SetLabel(val OptString) {
 
 // Ref: #/components/schemas/Collection
 type Collection struct {
-	Grids    []Grid                    `json:"grids"`
-	Matrices [][]int                   `json:"matrices"`
-	Tagsets  []CollectionTagsetsItem   `json:"tagsets"`
-	Maybes   []NilCollectionMaybesItem `json:"maybes"`
-	Anything []jx.Raw                  `json:"anything"`
-	Records  []Record                  `json:"records"`
+	Grids       []Grid                      `json:"grids"`
+	Matrices    [][]int                     `json:"matrices"`
+	Tagsets     []CollectionTagsetsItem     `json:"tagsets"`
+	Maybes      []NilCollectionMaybesItem   `json:"maybes"`
+	Anything    []jx.Raw                    `json:"anything"`
+	FreeMatrix  [][]jx.Raw                  `json:"freeMatrix"`
+	FreeTagsets []CollectionFreeTagsetsItem `json:"freeTagsets"`
+	Annotations []FreeForm                  `json:"annotations"`
+	Records     []Record                    `json:"records"`
 }
 
 // GetGrids returns the value of Grids.
@@ -80,6 +83,21 @@ func (s *Collection) GetMaybes() []NilCollectionMaybesItem {
 // GetAnything returns the value of Anything.
 func (s *Collection) GetAnything() []jx.Raw {
 	return s.Anything
+}
+
+// GetFreeMatrix returns the value of FreeMatrix.
+func (s *Collection) GetFreeMatrix() [][]jx.Raw {
+	return s.FreeMatrix
+}
+
+// GetFreeTagsets returns the value of FreeTagsets.
+func (s *Collection) GetFreeTagsets() []CollectionFreeTagsetsItem {
+	return s.FreeTagsets
+}
+
+// GetAnnotations returns the value of Annotations.
+func (s *Collection) GetAnnotations() []FreeForm {
+	return s.Annotations
 }
 
 // GetRecords returns the value of Records.
@@ -112,13 +130,40 @@ func (s *Collection) SetAnything(val []jx.Raw) {
 	s.Anything = val
 }
 
+// SetFreeMatrix sets the value of FreeMatrix.
+func (s *Collection) SetFreeMatrix(val [][]jx.Raw) {
+	s.FreeMatrix = val
+}
+
+// SetFreeTagsets sets the value of FreeTagsets.
+func (s *Collection) SetFreeTagsets(val []CollectionFreeTagsetsItem) {
+	s.FreeTagsets = val
+}
+
+// SetAnnotations sets the value of Annotations.
+func (s *Collection) SetAnnotations(val []FreeForm) {
+	s.Annotations = val
+}
+
 // SetRecords sets the value of Records.
 func (s *Collection) SetRecords(val []Record) {
 	s.Records = val
 }
 
+type CollectionFreeTagsetsItem map[string]jx.Raw
+
+func (s *CollectionFreeTagsetsItem) init() CollectionFreeTagsetsItem {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 type CollectionMaybesItem struct {
-	ID OptString `json:"id"`
+	ID    OptString `json:"id"`
+	Extra jx.Raw    `json:"extra"`
 }
 
 // GetID returns the value of ID.
@@ -126,9 +171,19 @@ func (s *CollectionMaybesItem) GetID() OptString {
 	return s.ID
 }
 
+// GetExtra returns the value of Extra.
+func (s *CollectionMaybesItem) GetExtra() jx.Raw {
+	return s.Extra
+}
+
 // SetID sets the value of ID.
 func (s *CollectionMaybesItem) SetID(val OptString) {
 	s.ID = val
+}
+
+// SetExtra sets the value of Extra.
+func (s *CollectionMaybesItem) SetExtra(val jx.Raw) {
+	s.Extra = val
 }
 
 type CollectionTagsetsItem map[string]string
@@ -155,6 +210,8 @@ func (s *CreateCollectionOK) GetCreated() OptInt {
 func (s *CreateCollectionOK) SetCreated(val OptInt) {
 	s.Created = val
 }
+
+type FreeForm jx.Raw
 
 // Ref: #/components/schemas/Grid
 type Grid struct {

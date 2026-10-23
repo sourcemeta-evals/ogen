@@ -281,3 +281,32 @@ func TestSchemaGenUniqueItemsAcceptsComplexItems(t *testing.T) {
 		})
 	}
 }
+
+func TestSchemaGenTupleUniqueItemsRejected(t *testing.T) {
+	a := require.New(t)
+	tuple := []*jsonschema.Schema{
+		{Type: jsonschema.String},
+		{Type: jsonschema.String},
+	}
+
+	s := newSchemaGen(func(ref jsonschema.Ref) (*ir.Type, bool) {
+		return nil, false
+	})
+	_, err := s.generate("Pair", &jsonschema.Schema{
+		Type:        jsonschema.Array,
+		Items:       tuple,
+		UniqueItems: true,
+	}, false)
+	var notImplemented *ErrNotImplemented
+	a.ErrorAs(err, &notImplemented)
+	a.Equal("tuple uniqueItems", notImplemented.Name)
+
+	s = newSchemaGen(func(ref jsonschema.Ref) (*ir.Type, bool) {
+		return nil, false
+	})
+	_, err = s.generate("Pair", &jsonschema.Schema{
+		Type:  jsonschema.Array,
+		Items: tuple,
+	}, false)
+	a.NoError(err)
+}

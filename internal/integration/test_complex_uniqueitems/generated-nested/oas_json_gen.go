@@ -221,6 +221,42 @@ func (s *Collection) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.FreeMatrix != nil {
+			e.FieldStart("freeMatrix")
+			e.ArrStart()
+			for _, elem := range s.FreeMatrix {
+				e.ArrStart()
+				for _, elem := range elem {
+					if len(elem) != 0 {
+						e.Raw(elem)
+					}
+				}
+				e.ArrEnd()
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.FreeTagsets != nil {
+			e.FieldStart("freeTagsets")
+			e.ArrStart()
+			for _, elem := range s.FreeTagsets {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.Annotations != nil {
+			e.FieldStart("annotations")
+			e.ArrStart()
+			for _, elem := range s.Annotations {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		if s.Records != nil {
 			e.FieldStart("records")
 			e.ArrStart()
@@ -232,13 +268,16 @@ func (s *Collection) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCollection = [6]string{
+var jsonFieldsNameOfCollection = [9]string{
 	0: "grids",
 	1: "matrices",
 	2: "tagsets",
 	3: "maybes",
 	4: "anything",
-	5: "records",
+	5: "freeMatrix",
+	6: "freeTagsets",
+	7: "annotations",
+	8: "records",
 }
 
 // Decode decodes Collection from json.
@@ -346,6 +385,67 @@ func (s *Collection) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"anything\"")
 			}
+		case "freeMatrix":
+			if err := func() error {
+				s.FreeMatrix = make([][]jx.Raw, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem []jx.Raw
+					elem = make([]jx.Raw, 0)
+					if err := d.Arr(func(d *jx.Decoder) error {
+						var elemElem jx.Raw
+						v, err := d.RawAppend(nil)
+						elemElem = jx.Raw(v)
+						if err != nil {
+							return err
+						}
+						elem = append(elem, elemElem)
+						return nil
+					}); err != nil {
+						return err
+					}
+					s.FreeMatrix = append(s.FreeMatrix, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"freeMatrix\"")
+			}
+		case "freeTagsets":
+			if err := func() error {
+				s.FreeTagsets = make([]CollectionFreeTagsetsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem CollectionFreeTagsetsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.FreeTagsets = append(s.FreeTagsets, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"freeTagsets\"")
+			}
+		case "annotations":
+			if err := func() error {
+				s.Annotations = make([]FreeForm, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem FreeForm
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Annotations = append(s.Annotations, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"annotations\"")
+			}
 		case "records":
 			if err := func() error {
 				s.Records = make([]Record, 0)
@@ -388,6 +488,64 @@ func (s *Collection) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s CollectionFreeTagsetsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s CollectionFreeTagsetsItem) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes CollectionFreeTagsetsItem from json.
+func (s *CollectionFreeTagsetsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CollectionFreeTagsetsItem to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CollectionFreeTagsetsItem")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CollectionFreeTagsetsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CollectionFreeTagsetsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *CollectionMaybesItem) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -402,10 +560,17 @@ func (s *CollectionMaybesItem) encodeFields(e *jx.Encoder) {
 			s.ID.Encode(e)
 		}
 	}
+	{
+		if len(s.Extra) != 0 {
+			e.FieldStart("extra")
+			e.Raw(s.Extra)
+		}
+	}
 }
 
-var jsonFieldsNameOfCollectionMaybesItem = [1]string{
+var jsonFieldsNameOfCollectionMaybesItem = [2]string{
 	0: "id",
+	1: "extra",
 }
 
 // Decode decodes CollectionMaybesItem from json.
@@ -425,6 +590,17 @@ func (s *CollectionMaybesItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "extra":
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				s.Extra = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"extra\"")
 			}
 		default:
 			return d.Skip()
@@ -565,6 +741,48 @@ func (s *CreateCollectionOK) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateCollectionOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes FreeForm as json.
+func (s FreeForm) Encode(e *jx.Encoder) {
+	unwrapped := jx.Raw(s)
+
+	if len(unwrapped) != 0 {
+		e.Raw(unwrapped)
+	}
+}
+
+// Decode decodes FreeForm from json.
+func (s *FreeForm) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode FreeForm to nil")
+	}
+	var unwrapped jx.Raw
+	if err := func() error {
+		v, err := d.RawAppend(nil)
+		unwrapped = jx.Raw(v)
+		if err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = FreeForm(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s FreeForm) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *FreeForm) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

@@ -95,7 +95,7 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		case field.IsDeepOnly:
 			// No == operator for this type
 			fmt.Fprintf(b, "\t// Compare field without == operator: %s\n", field.FieldName)
-			fmt.Fprintf(b, "\tif !reflect.DeepEqual(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\tif !validate.EqualDeep(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\treturn false\n")
 			fmt.Fprintf(b, "\t}\n")
 		default:
@@ -160,7 +160,7 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsDeepOnly:
 			// Optional wrapper around a value without == operator
-			fmt.Fprintf(b, "%sif !reflect.DeepEqual(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "%sif !validate.EqualDeep(a.%s.Value, b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		default:
@@ -221,7 +221,7 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsDeepOnly:
 			// Nullable wrapper around a value without == operator
-			fmt.Fprintf(b, "\t\tif !reflect.DeepEqual(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
+			fmt.Fprintf(b, "\t\tif !validate.EqualDeep(a.%s.Value, b.%s.Value) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\t\treturn false\n")
 			fmt.Fprintf(b, "\t\t}\n")
 		default:
@@ -236,9 +236,10 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		// Pointer field comparison
 		fmt.Fprintf(b, "\t// Compare pointer field: %s\n", field.FieldName)
 		if field.IsDeepOnly {
-			// Pointee has no == operator; reflect.DeepEqual dereferences
-			// pointers and handles nil on either side
-			fmt.Fprintf(b, "\tif !reflect.DeepEqual(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
+			// Pointee has no == operator; validate.EqualDeep dereferences
+			// pointers, handles nil on either side and keeps nested raw
+			// JSON semantic
+			fmt.Fprintf(b, "\tif !validate.EqualDeep(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\treturn false\n")
 			fmt.Fprintf(b, "\t}\n")
 			return
@@ -266,9 +267,10 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		fmt.Fprintf(b, "\t// Compare array field: %s\n", field.FieldName)
 		if field.IsArrayOfDeep {
 			// Elements have no == operator and no generated Equal method.
-			// reflect.DeepEqual also distinguishes nil from empty slices,
-			// which covers nil-semantic arrays
-			fmt.Fprintf(b, "\tif !reflect.DeepEqual(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
+			// validate.EqualDeep distinguishes nil from empty slices, which
+			// covers nil-semantic arrays, and compares nested raw JSON
+			// semantically
+			fmt.Fprintf(b, "\tif !validate.EqualDeep(a.%s, b.%s) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\treturn false\n")
 			fmt.Fprintf(b, "\t}\n")
 			return
@@ -694,7 +696,7 @@ func (g *Generator) writeMapComparison(b *strings.Builder, aMap, bMap, indent st
 	case field.IsMapOfDeep:
 		// Values without == operator
 		fmt.Fprintf(b, "%s\tbv, ok := %s[k]\n", indent, bMap)
-		fmt.Fprintf(b, "%s\tif !ok || !reflect.DeepEqual(v, bv) {\n", indent)
+		fmt.Fprintf(b, "%s\tif !ok || !validate.EqualDeep(v, bv) {\n", indent)
 		fmt.Fprintf(b, "%s\t\treturn false\n", indent)
 		fmt.Fprintf(b, "%s\t}\n", indent)
 	default:
@@ -714,7 +716,7 @@ func (g *Generator) writeArrayComparisonWithNullable(
 	isArrayOfStructs := field.IsArrayOfStructs
 	if field.IsArrayOfDeep {
 		// Elements have no == operator and no generated Equal method
-		fmt.Fprintf(b, "%sif !reflect.DeepEqual(%s, %s) {\n", indent, aArray, bArray)
+		fmt.Fprintf(b, "%sif !validate.EqualDeep(%s, %s) {\n", indent, aArray, bArray)
 		fmt.Fprintf(b, "%s\treturn false\n", indent)
 		fmt.Fprintf(b, "%s}\n", indent)
 		return

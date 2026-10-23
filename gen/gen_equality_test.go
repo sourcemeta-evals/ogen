@@ -268,14 +268,14 @@ func TestWriteArrayComparison(t *testing.T) {
 			notContains: []string{"a.Values[i] != b.Values[i]"},
 		},
 		{
-			name:     "elements without == operator use reflect.DeepEqual",
+			name:     "elements without == operator use validate.EqualDeep",
 			aArray:   "a.Matrix",
 			bArray:   "b.Matrix",
 			indent:   "\t",
 			field:    ir.FieldEqualitySpec{IsArrayOfDeep: true},
 			hasDepth: true,
 			expectedContains: []string{
-				"if !reflect.DeepEqual(a.Matrix, b.Matrix)",
+				"if !validate.EqualDeep(a.Matrix, b.Matrix)",
 			},
 			notContains: []string{"for i := range", "a.Matrix[i]"},
 		},
@@ -780,12 +780,12 @@ func TestWriteMapComparison(t *testing.T) {
 			notContains: []string{"v != bv", ".Equal("},
 		},
 		{
-			name:     "values without == operator use reflect.DeepEqual",
+			name:     "values without == operator use validate.EqualDeep",
 			field:    ir.FieldEqualitySpec{IsMapOfDeep: true},
 			hasDepth: true,
 			expectedContains: []string{
 				"bv, ok := b.Attrs[k]",
-				"if !ok || !reflect.DeepEqual(v, bv)",
+				"if !ok || !validate.EqualDeep(v, bv)",
 			},
 			notContains: []string{"v != bv", ".Equal("},
 		},

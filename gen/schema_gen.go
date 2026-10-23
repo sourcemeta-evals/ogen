@@ -518,6 +518,12 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		return s, nil
 	case jsonschema.Array:
 		if tuple := schema.Items; len(tuple) > 0 {
+			if schema.UniqueItems {
+				// Tuple elements are heterogeneous struct fields with no
+				// runtime uniqueness validation, so keep rejecting them
+				// like the base generator did
+				return nil, &ErrNotImplemented{Name: "tuple uniqueItems"}
+			}
 			ret := g.regtype(name, &ir.Type{
 				Kind:   ir.KindStruct,
 				Name:   name,

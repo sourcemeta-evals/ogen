@@ -333,3 +333,36 @@ func TestValidateUniqueCollection_MaybesRawExtra(t *testing.T) {
 	collection = Collection{Maybes: []NilCollectionMaybesItem{first, different}}
 	requireNoError(t, collection.Validate(), "different raw extras")
 }
+
+// Named raw JSON aliases nested inside deep containers must compare
+// semantically through the generated Equal method, not bytewise.
+func TestValidateUniqueCollection_FreeGrids(t *testing.T) {
+	collection := Collection{FreeGrids: [][]FreeForm{
+		{FreeForm(`{"a":1,"b":2}`)},
+		{FreeForm(`{ "b":2, "a":1 }`)},
+	}}
+	requireDuplicateError(t, collection.Validate(), "reordered nested aliased raw objects")
+
+	collection = Collection{FreeGrids: [][]FreeForm{
+		{FreeForm(`{"a":1}`)},
+		{FreeForm(`{"a":2}`)},
+	}}
+	requireNoError(t, collection.Validate(), "distinct nested aliased raw objects")
+}
+
+// Named binary aliases nested inside deep containers carry decoded bytes,
+// not JSON, so payloads that happen to parse as equivalent JSON numbers must
+// stay distinct.
+func TestValidateUniqueCollection_BlobMatrix(t *testing.T) {
+	collection := Collection{BlobMatrix: [][]Blob{
+		{Blob(`1`)},
+		{Blob(`1.0`)},
+	}}
+	requireNoError(t, collection.Validate(), "distinct binary payloads")
+
+	collection = Collection{BlobMatrix: [][]Blob{
+		{Blob(`1`)},
+		{Blob(`1`)},
+	}}
+	requireDuplicateError(t, collection.Validate(), "identical binary payloads")
+}

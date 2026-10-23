@@ -61,6 +61,15 @@ func (a ComprehensiveItem) Hash(depth int) uint64 {
 	} else {
 		h.Write([]byte{0})
 	}
+	// Hash optional field: CreatedAt
+	if a.CreatedAt.Set {
+		h.Write([]byte{1})
+		// Wrapped value excluded from the hash: only its presence participates
+	} else {
+		h.Write([]byte{0})
+	}
+	// Hash primitive field: Payload
+	h.Write([]byte(fmt.Sprintf("%v", a.Payload)))
 	// Hash optional field: Status
 	if a.Status.Set {
 		h.Write([]byte{1})

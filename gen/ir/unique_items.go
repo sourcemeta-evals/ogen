@@ -61,6 +61,11 @@ func ComparableWithOperator(t *Type) bool {
 		case Decimal, URL:
 			// Both contain pointers, so == compares identity, not value
 			return false
+		case Time:
+			// == also compares the location pointer and monotonic clock, so
+			// identical decoded timestamps with a numeric zone offset are
+			// not ==
+			return false
 		default:
 			return true
 		}

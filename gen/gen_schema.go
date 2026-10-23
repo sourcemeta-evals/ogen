@@ -204,6 +204,9 @@ func GenerateSchema(schema *jsonschema.Schema, fs FileSystem, opts GenerateSchem
 			return errors.Wrap(err, "generate unique validators")
 		}
 	}
+	if err := equality.generateRawJSONEqualMethods(fs, opts.PkgName); err != nil {
+		return errors.Wrap(err, "generate raw JSON equal methods")
+	}
 
 	return nil
 }

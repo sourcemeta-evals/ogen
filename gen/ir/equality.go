@@ -54,6 +54,11 @@ type FieldEqualitySpec struct {
 	// IsByteSlice indicates if this field is a binary byte slice ([]byte)
 	IsByteSlice bool
 
+	// IsNilSemanticByteSlice indicates a direct byte-slice field where nil
+	// carries meaning (absent property or JSON null), so nil and empty must
+	// compare as different values
+	IsNilSemanticByteSlice bool
+
 	// IsURL indicates the field value (or the wrapped value) is a url.URL,
 	// compared through String() because url.URL contains a pointer
 	IsURL bool

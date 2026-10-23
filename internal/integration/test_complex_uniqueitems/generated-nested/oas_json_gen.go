@@ -155,6 +155,46 @@ func (s *AddGridBatchReqItem) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes Blob as json.
+func (s Blob) Encode(e *jx.Encoder) {
+	unwrapped := []byte(s)
+
+	e.Base64(unwrapped)
+}
+
+// Decode decodes Blob from json.
+func (s *Blob) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode Blob to nil")
+	}
+	var unwrapped []byte
+	if err := func() error {
+		v, err := d.Base64()
+		unwrapped = []byte(v)
+		if err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = Blob(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s Blob) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *Blob) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode implements json.Marshaler.
 func (s *Collection) Encode(e *jx.Encoder) {
 	e.ObjStart()
@@ -257,6 +297,34 @@ func (s *Collection) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.FreeGrids != nil {
+			e.FieldStart("freeGrids")
+			e.ArrStart()
+			for _, elem := range s.FreeGrids {
+				e.ArrStart()
+				for _, elem := range elem {
+					elem.Encode(e)
+				}
+				e.ArrEnd()
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.BlobMatrix != nil {
+			e.FieldStart("blobMatrix")
+			e.ArrStart()
+			for _, elem := range s.BlobMatrix {
+				e.ArrStart()
+				for _, elem := range elem {
+					elem.Encode(e)
+				}
+				e.ArrEnd()
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		if s.Records != nil {
 			e.FieldStart("records")
 			e.ArrStart()
@@ -268,16 +336,18 @@ func (s *Collection) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCollection = [9]string{
-	0: "grids",
-	1: "matrices",
-	2: "tagsets",
-	3: "maybes",
-	4: "anything",
-	5: "freeMatrix",
-	6: "freeTagsets",
-	7: "annotations",
-	8: "records",
+var jsonFieldsNameOfCollection = [11]string{
+	0:  "grids",
+	1:  "matrices",
+	2:  "tagsets",
+	3:  "maybes",
+	4:  "anything",
+	5:  "freeMatrix",
+	6:  "freeTagsets",
+	7:  "annotations",
+	8:  "freeGrids",
+	9:  "blobMatrix",
+	10: "records",
 }
 
 // Decode decodes Collection from json.
@@ -445,6 +515,56 @@ func (s *Collection) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"annotations\"")
+			}
+		case "freeGrids":
+			if err := func() error {
+				s.FreeGrids = make([][]FreeForm, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem []FreeForm
+					elem = make([]FreeForm, 0)
+					if err := d.Arr(func(d *jx.Decoder) error {
+						var elemElem FreeForm
+						if err := elemElem.Decode(d); err != nil {
+							return err
+						}
+						elem = append(elem, elemElem)
+						return nil
+					}); err != nil {
+						return err
+					}
+					s.FreeGrids = append(s.FreeGrids, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"freeGrids\"")
+			}
+		case "blobMatrix":
+			if err := func() error {
+				s.BlobMatrix = make([][]Blob, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem []Blob
+					elem = make([]Blob, 0)
+					if err := d.Arr(func(d *jx.Decoder) error {
+						var elemElem Blob
+						if err := elemElem.Decode(d); err != nil {
+							return err
+						}
+						elem = append(elem, elemElem)
+						return nil
+					}); err != nil {
+						return err
+					}
+					s.BlobMatrix = append(s.BlobMatrix, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"blobMatrix\"")
 			}
 		case "records":
 			if err := func() error {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/big"
 	"reflect"
+	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
@@ -14,11 +15,22 @@ import (
 //
 // It is used for uniqueItems arrays whose element type is not comparable
 // with == and has no generated Equal method, such as nested arrays, maps
-// and nullable object wrappers.
-func UniqueItemsDeep[S ~[]T, T any](arr S) error {
+// and nullable object wrappers. When EqualDeep exhausts its recursion
+// budget, the comparison is reported as a DepthLimitError instead of a
+// silently wrong verdict.
+func UniqueItemsDeep[S ~[]T, T any](arr S) (err error) {
 	if len(arr) < 2 {
 		return nil
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(*DepthLimitError); ok {
+				err = e
+			} else {
+				panic(r)
+			}
+		}
+	}()
 	for i := range arr {
 		for j := i + 1; j < len(arr); j++ {
 			if EqualDeep(arr[i], arr[j]) {
@@ -33,35 +45,32 @@ func UniqueItemsDeep[S ~[]T, T any](arr S) error {
 // comparing raw JSON payloads semantically instead of byte by byte.
 //
 // It matches reflect.DeepEqual, including the distinction between nil and
-// empty slices and maps, except that jx.Raw values (and named types whose
-// underlying type is a raw JSON byte slice) compare through EqualRawJSON,
-// and types with an Equal method of the form Equal(T) bool delegate to it,
-// so generated struct items, time.Time and decimal values compare by value.
+// empty slices and maps, except that jx.Raw values compare through
+// EqualRawJSON, time.Time values compare through EqualTime, and types with
+// an Equal method of the form Equal(T) bool delegate to it, so generated
+// struct items, generated raw JSON aliases and decimal values compare by
+// value. Named byte-slice types without an Equal method stay bytewise,
+// because they carry decoded binary data, not JSON.
+//
+// Comparison depth is bounded: beyond equalDeepMaxDepth levels, such as on
+// cyclic values, EqualDeep panics with a DepthLimitError, which
+// UniqueItemsDeep and the generated uniqueness validators recover into a
+// returned error.
 func EqualDeep[T any](a, b T) bool {
-	return equalDeepValue(reflect.ValueOf(a), reflect.ValueOf(b))
+	return equalDeepValue(reflect.ValueOf(a), reflect.ValueOf(b), 0)
 }
+
+// equalDeepMaxDepth bounds recursion in equalDeepValue, so cyclic values
+// surface as an error instead of exhausting the stack.
+const equalDeepMaxDepth = 1000
 
 var (
-	rawJSONReflectType   = reflect.TypeOf(jx.Raw(nil))
-	byteSliceReflectType = reflect.TypeOf([]byte(nil))
-	boolReflectType      = reflect.TypeOf(false)
+	rawJSONReflectType = reflect.TypeOf(jx.Raw(nil))
+	timeReflectType    = reflect.TypeOf(time.Time{})
+	boolReflectType    = reflect.TypeOf(false)
 )
 
-// isRawJSONReflectType reports whether a reflect type holds raw JSON bytes:
-// jx.Raw itself, or a defined byte-slice type such as a generated alias of a
-// free-form schema. Plain []byte stays bytewise, because it carries decoded
-// binary data, not JSON.
-func isRawJSONReflectType(t reflect.Type) bool {
-	if t == rawJSONReflectType {
-		return true
-	}
-	return t != byteSliceReflectType &&
-		t.Kind() == reflect.Slice &&
-		t.Elem().Kind() == reflect.Uint8 &&
-		t.ConvertibleTo(rawJSONReflectType)
-}
-
-func equalDeepValue(a, b reflect.Value) bool {
+func equalDeepValue(a, b reflect.Value, depth int) bool {
 	if !a.IsValid() || !b.IsValid() {
 		return a.IsValid() == b.IsValid()
 	}
@@ -69,8 +78,17 @@ func equalDeepValue(a, b reflect.Value) bool {
 	if t != b.Type() {
 		return false
 	}
-	if isRawJSONReflectType(t) {
+	if depth > equalDeepMaxDepth {
+		panic(&DepthLimitError{
+			MaxDepth: equalDeepMaxDepth,
+			TypeName: t.String(),
+		})
+	}
+	if t == rawJSONReflectType {
 		return EqualRawJSON(jx.Raw(a.Bytes()), jx.Raw(b.Bytes()))
+	}
+	if t == timeReflectType {
+		return EqualTime(a.Interface().(time.Time), b.Interface().(time.Time))
 	}
 	if method, ok := t.MethodByName("Equal"); ok &&
 		method.Type.NumIn() == 2 && method.Type.In(1) == t &&
@@ -82,25 +100,25 @@ func equalDeepValue(a, b reflect.Value) bool {
 		if a.IsNil() || b.IsNil() {
 			return a.IsNil() == b.IsNil()
 		}
-		return equalDeepValue(a.Elem(), b.Elem())
+		return equalDeepValue(a.Elem(), b.Elem(), depth+1)
 	case reflect.Interface:
 		if a.IsNil() || b.IsNil() {
 			return a.IsNil() == b.IsNil()
 		}
-		return equalDeepValue(a.Elem(), b.Elem())
+		return equalDeepValue(a.Elem(), b.Elem(), depth+1)
 	case reflect.Slice:
 		if a.IsNil() != b.IsNil() || a.Len() != b.Len() {
 			return false
 		}
 		for i := 0; i < a.Len(); i++ {
-			if !equalDeepValue(a.Index(i), b.Index(i)) {
+			if !equalDeepValue(a.Index(i), b.Index(i), depth+1) {
 				return false
 			}
 		}
 		return true
 	case reflect.Array:
 		for i := 0; i < a.Len(); i++ {
-			if !equalDeepValue(a.Index(i), b.Index(i)) {
+			if !equalDeepValue(a.Index(i), b.Index(i), depth+1) {
 				return false
 			}
 		}
@@ -112,7 +130,7 @@ func equalDeepValue(a, b reflect.Value) bool {
 		iter := a.MapRange()
 		for iter.Next() {
 			bval := b.MapIndex(iter.Key())
-			if !bval.IsValid() || !equalDeepValue(iter.Value(), bval) {
+			if !bval.IsValid() || !equalDeepValue(iter.Value(), bval, depth+1) {
 				return false
 			}
 		}
@@ -126,7 +144,7 @@ func equalDeepValue(a, b reflect.Value) bool {
 			}
 		}
 		for i := 0; i < t.NumField(); i++ {
-			if !equalDeepValue(a.Field(i), b.Field(i)) {
+			if !equalDeepValue(a.Field(i), b.Field(i), depth+1) {
 				return false
 			}
 		}
@@ -134,6 +152,20 @@ func equalDeepValue(a, b reflect.Value) bool {
 	default:
 		return reflect.DeepEqual(a.Interface(), b.Interface())
 	}
+}
+
+// EqualTime reports whether two timestamps denote the same instant with the
+// same UTC offset. Comparing time.Time with == also compares the location
+// pointer, so identical decoded literals with a numeric zone offset would
+// not be equal, while Equal alone ignores the offset, so distinct
+// representations of one instant would collapse.
+func EqualTime(a, b time.Time) bool {
+	if !a.Equal(b) {
+		return false
+	}
+	_, aoffset := a.Zone()
+	_, boffset := b.Zone()
+	return aoffset == boffset
 }
 
 // UniqueItemsRawJSON ensures given array of raw JSON values has no
@@ -354,33 +386,23 @@ func equalJSONArray(left, right *jx.Decoder) (bool, error) {
 }
 
 func equalJSONObject(left, right *jx.Decoder) (bool, error) {
-	lmembers := map[string]jx.Raw{}
-	if err := left.ObjBytes(func(d *jx.Decoder, key []byte) error {
-		raw, err := d.Raw()
-		if err != nil {
-			return errors.Wrapf(err, "%q", key)
-		}
-		lmembers[string(key)] = raw
-		return nil
-	}); err != nil {
+	lmembers, lcount, err := objectMembers(left)
+	if err != nil {
 		return false, errors.Wrap(err, "left")
 	}
-
-	matched := 0
-	riter, err := right.ObjIter()
+	rmembers, rcount, err := objectMembers(right)
 	if err != nil {
 		return false, errors.Wrap(err, "right")
 	}
-	for riter.Next() {
-		lval, ok := lmembers[string(riter.Key())]
+	// Repeated keys collapse to their last value on both sides, so the
+	// verdict does not depend on operand order
+	if lcount != rcount || len(lmembers) != len(rmembers) {
+		return false, nil
+	}
+	for key, lval := range lmembers {
+		rval, ok := rmembers[key]
 		if !ok {
 			return false, nil
-		}
-		matched++
-
-		rval, err := right.Raw()
-		if err != nil {
-			return false, errors.Wrap(err, "right")
 		}
 		equal, err := rawJSONEqual(lval, rval)
 		if err != nil {
@@ -390,8 +412,24 @@ func equalJSONObject(left, right *jx.Decoder) (bool, error) {
 			return false, nil
 		}
 	}
-	if err := riter.Err(); err != nil {
-		return false, errors.Wrap(err, "right")
+	return true, nil
+}
+
+// objectMembers collects the members of a JSON object, keeping the last
+// value of a repeated key, together with the total member count.
+func objectMembers(d *jx.Decoder) (map[string]jx.Raw, int, error) {
+	members := map[string]jx.Raw{}
+	count := 0
+	if err := d.ObjBytes(func(d *jx.Decoder, key []byte) error {
+		raw, err := d.Raw()
+		if err != nil {
+			return errors.Wrapf(err, "%q", key)
+		}
+		members[string(key)] = raw
+		count++
+		return nil
+	}); err != nil {
+		return nil, 0, err
 	}
-	return matched == len(lmembers), nil
+	return members, count, nil
 }

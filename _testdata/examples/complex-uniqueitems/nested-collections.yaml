@@ -10,6 +10,8 @@ info:
     - Arrays of nullable objects
     - Arrays of free-form values (no item schema)
     - Arrays of referenced free-form schemas (named raw JSON aliases)
+    - Arrays of arrays whose elements are named raw JSON aliases
+    - Arrays of arrays whose elements are named binary aliases
     - Arrays of arrays and maps whose values are free-form
     - Anonymous operation body arrays of objects
     - Object items with nested collection, raw JSON and float map fields
@@ -119,6 +121,20 @@ components:
           uniqueItems: true
           items:
             $ref: '#/components/schemas/FreeForm'
+        freeGrids:
+          type: array
+          uniqueItems: true
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/FreeForm'
+        blobMatrix:
+          type: array
+          uniqueItems: true
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Blob'
         records:
           type: array
           uniqueItems: true
@@ -199,3 +215,6 @@ components:
         label:
           type: string
     FreeForm: {}
+    Blob:
+      type: string
+      format: byte

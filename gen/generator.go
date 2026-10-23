@@ -37,6 +37,7 @@ type Generator struct {
 	router            Router
 	imports           map[string]string
 	equalitySpecs     []*ir.EqualityMethodSpec // Types requiring Equal() methods for uniqueItems validation
+	rawJSONAliases    []*ir.Type               // Named raw JSON types in uniqueItems items, needing semantic Equal() methods
 
 	log *zap.Logger
 }

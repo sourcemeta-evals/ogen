@@ -82,6 +82,18 @@ components:
           nullable: true
           description: External system ID (nullable)
 
+        # Optional timestamp, compared by instant and offset
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+
+        # Optional binary payload, where absent and empty differ
+        payload:
+          type: string
+          format: byte
+          description: Optional binary payload
+
         # Enum field
         status:
           type: string

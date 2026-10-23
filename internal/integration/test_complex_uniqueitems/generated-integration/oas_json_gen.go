@@ -5,9 +5,11 @@ package api
 import (
 	"math/bits"
 	"strconv"
+	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+	"github.com/ogen-go/ogen/json"
 	"github.com/ogen-go/ogen/validate"
 )
 
@@ -53,6 +55,16 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 			e.FieldStart("externalId")
 			s.ExternalId.Encode(e)
 		}
+	}
+	{
+		if s.CreatedAt.Set {
+			e.FieldStart("createdAt")
+			s.CreatedAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		e.FieldStart("payload")
+		e.Base64(s.Payload)
 	}
 	{
 		if s.Status.Set {
@@ -128,7 +140,7 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfComprehensiveItem = [17]string{
+var jsonFieldsNameOfComprehensiveItem = [19]string{
 	0:  "id",
 	1:  "name",
 	2:  "priority",
@@ -136,16 +148,18 @@ var jsonFieldsNameOfComprehensiveItem = [17]string{
 	4:  "description",
 	5:  "score",
 	6:  "externalId",
-	7:  "status",
-	8:  "category",
-	9:  "tags",
-	10: "labels",
-	11: "metadata",
-	12: "customFields",
-	13: "owner",
-	14: "assignee",
-	15: "watchers",
-	16: "configuration",
+	7:  "createdAt",
+	8:  "payload",
+	9:  "status",
+	10: "category",
+	11: "tags",
+	12: "labels",
+	13: "metadata",
+	14: "customFields",
+	15: "owner",
+	16: "assignee",
+	17: "watchers",
+	18: "configuration",
 }
 
 // Decode decodes ComprehensiveItem from json.
@@ -234,6 +248,27 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"externalId\"")
+			}
+		case "createdAt":
+			if err := func() error {
+				s.CreatedAt.Reset()
+				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"createdAt\"")
+			}
+		case "payload":
+			if err := func() error {
+				v, err := d.Base64()
+				s.Payload = []byte(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"payload\"")
 			}
 		case "status":
 			if err := func() error {
@@ -1334,6 +1369,41 @@ func (s OptConfigurationSettings) MarshalJSON() ([]byte, error) {
 func (s *OptConfigurationSettings) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
+}
+
+// Encode encodes time.Time as json.
+func (o OptDateTime) Encode(e *jx.Encoder, format func(*jx.Encoder, time.Time)) {
+	if !o.Set {
+		return
+	}
+	format(e, o.Value)
+}
+
+// Decode decodes time.Time from json.
+func (o *OptDateTime) Decode(d *jx.Decoder, format func(*jx.Decoder) (time.Time, error)) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptDateTime to nil")
+	}
+	o.Set = true
+	v, err := format(d)
+	if err != nil {
+		return err
+	}
+	o.Value = v
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptDateTime) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e, json.EncodeDateTime)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptDateTime) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d, json.DecodeDateTime)
 }
 
 // Encode encodes FeatureParameters as json.

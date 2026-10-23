@@ -35,6 +35,9 @@ func (g *Generator) collectEqualitySpecs() {
 	sort.Slice(g.equalitySpecs, func(i, j int) bool {
 		return g.equalitySpecs[i].TypeName < g.equalitySpecs[j].TypeName
 	})
+	sort.Slice(g.rawJSONAliases, func(i, j int) bool {
+		return g.rawJSONAliases[i].Name < g.rawJSONAliases[j].Name
+	})
 }
 
 // collectFromOperation walks every type reachable from an operation's
@@ -94,6 +97,10 @@ func (g *Generator) collectFromType(t *ir.Type, visited map[string]bool, rootVis
 			// Collect specs for all nested types within this item
 			g.collectNestedTypes(t.Item, visited)
 		}
+		// Named raw JSON aliases anywhere inside the item need a semantic
+		// Equal method, so the reflect-based deep comparison does not fall
+		// back to comparing their bytes
+		g.collectRawJSONAliases(t.Item, make(map[*ir.Type]bool))
 	}
 
 	switch t.Kind {
@@ -114,6 +121,59 @@ func (g *Generator) collectFromType(t *ir.Type, visited map[string]bool, rootVis
 	case ir.KindPointer:
 		g.collectFromType(t.PointerTo, visited, rootVisited)
 	}
+}
+
+// collectRawJSONAliases records every named type whose underlying type is a
+// raw JSON value (an alias of a free-form schema) reachable from a
+// uniqueItems item. Each recorded alias gets a generated semantic Equal
+// method, which the reflect-based deep comparison dispatches to, keeping
+// named raw JSON semantic while named binary byte slices stay bytewise.
+func (g *Generator) collectRawJSONAliases(t *ir.Type, visited map[*ir.Type]bool) {
+	if t == nil || visited[t] {
+		return
+	}
+	visited[t] = true
+
+	if t.Kind == ir.KindAlias && t.Name != "" && isRawJSONAlias(t) {
+		already := false
+		for _, existing := range g.rawJSONAliases {
+			if existing.Name == t.Name {
+				already = true
+				break
+			}
+		}
+		if !already {
+			g.rawJSONAliases = append(g.rawJSONAliases, t)
+		}
+	}
+
+	switch t.Kind {
+	case ir.KindStruct:
+		for _, field := range t.Fields {
+			g.collectRawJSONAliases(field.Type, visited)
+		}
+	case ir.KindSum:
+		for _, variant := range t.SumOf {
+			g.collectRawJSONAliases(variant, visited)
+		}
+	case ir.KindArray, ir.KindMap:
+		g.collectRawJSONAliases(t.Item, visited)
+	case ir.KindGeneric:
+		g.collectRawJSONAliases(t.GenericOf, visited)
+	case ir.KindAlias:
+		g.collectRawJSONAliases(t.AliasTo, visited)
+	case ir.KindPointer:
+		g.collectRawJSONAliases(t.PointerTo, visited)
+	}
+}
+
+// isRawJSONAlias reports whether a type is an alias chain ending in a
+// free-form (any) schema, rendered as a named jx.Raw type.
+func isRawJSONAlias(t *ir.Type) bool {
+	for t.Kind == ir.KindAlias && t.AliasTo != nil {
+		t = t.AliasTo
+	}
+	return t.Kind == ir.KindAny
 }
 
 // collectNestedTypes recursively collects all nested types that need Equal/Hash methods
@@ -269,6 +329,12 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				}
 			}
 
+			// Optional and nullable byte slices also use nil to encode the
+			// absent or null state, which is distinct from empty bytes
+			isNilSemanticByteSlice := isByteSlice &&
+				field.Type.Kind == ir.KindPrimitive &&
+				(field.Type.NilSemantic == ir.NilOptional || field.Type.NilSemantic == ir.NilNull)
+
 			// Check if this is a map of structs (either direct or wrapped in Optional/Nullable)
 			isMapOfStructs := false
 			mapType := field.Type
@@ -396,27 +462,28 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			}
 
 			fieldSpec := ir.FieldEqualitySpec{
-				FieldName:          field.Name,
-				FieldType:          categorizeFieldType(field.Type),
-				GoType:             goType,
-				IsNested:           isNestedObject(field.Type),
-				IsMap:              isMap,
-				IsMapOfStructs:     isMapOfStructs,
-				IsMapOfFloats:      isMapOfFloats,
-				IsMapOfRaw:         isMapOfRaw,
-				IsMapOfDeep:        isMapOfDeep,
-				IsArray:            isArray,
-				IsArrayOfStructs:   isArrayOfStructs,
-				IsArrayOfNullable:  isArrayOfNullable,
-				IsArrayOfRaw:       isArrayOfRaw,
-				IsArrayOfDeep:      isArrayOfDeep,
-				IsNilSemanticArray: isNilSemanticArray,
-				IsByteSlice:        isByteSlice,
-				IsRawJSON:          isRawJSON,
-				IsURL:              isURL,
-				IsDecimal:          isDecimal,
-				IsDeepOnly:         isDeepOnly,
-				IsOptionalNullable: isOptionalNullable(field.Type),
+				FieldName:              field.Name,
+				FieldType:              categorizeFieldType(field.Type),
+				GoType:                 goType,
+				IsNested:               isNestedObject(field.Type),
+				IsMap:                  isMap,
+				IsMapOfStructs:         isMapOfStructs,
+				IsMapOfFloats:          isMapOfFloats,
+				IsMapOfRaw:             isMapOfRaw,
+				IsMapOfDeep:            isMapOfDeep,
+				IsArray:                isArray,
+				IsArrayOfStructs:       isArrayOfStructs,
+				IsArrayOfNullable:      isArrayOfNullable,
+				IsArrayOfRaw:           isArrayOfRaw,
+				IsArrayOfDeep:          isArrayOfDeep,
+				IsNilSemanticArray:     isNilSemanticArray,
+				IsByteSlice:            isByteSlice,
+				IsNilSemanticByteSlice: isNilSemanticByteSlice,
+				IsRawJSON:              isRawJSON,
+				IsURL:                  isURL,
+				IsDecimal:              isDecimal,
+				IsDeepOnly:             isDeepOnly,
+				IsOptionalNullable:     isOptionalNullable(field.Type),
 			}
 			spec.Fields = append(spec.Fields, fieldSpec)
 		}

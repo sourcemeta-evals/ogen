@@ -243,6 +243,84 @@ func (s *Collection) Validate() error {
 		})
 	}
 	if err := func() error {
+		if s.FreeGrids == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.FreeGrids)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItemsDeep(s.FreeGrids); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.FreeGrids {
+			if err := func() error {
+				if elem == nil {
+					return errors.New("nil is invalid value")
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "freeGrids",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.BlobMatrix == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.BlobMatrix)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItemsDeep(s.BlobMatrix); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.BlobMatrix {
+			if err := func() error {
+				if elem == nil {
+					return errors.New("nil is invalid value")
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "blobMatrix",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Records == nil {
 			return nil // optional
 		}

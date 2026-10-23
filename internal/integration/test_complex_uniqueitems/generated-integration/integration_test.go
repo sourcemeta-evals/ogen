@@ -3,6 +3,7 @@ package api
 import (
 	"math"
 	"testing"
+	"time"
 
 	"github.com/ogen-go/ogen/validate"
 )
@@ -542,5 +543,69 @@ func BenchmarkValidateUniqueComprehensiveItem_100Items(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Unexpected error: %v", err)
 		}
+	}
+}
+
+// Timestamps parsed separately from the same literal carry distinct location
+// pointers, so comparison must use the instant and offset, not ==.
+func TestValidateUniqueComprehensiveItem_TimestampDuplicates(t *testing.T) {
+	parse := func(layout, value string) time.Time {
+		parsed, err := time.Parse(layout, value)
+		if err != nil {
+			t.Fatalf("parse %q: %v", value, err)
+		}
+		return parsed
+	}
+	base := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Timestamped",
+		Priority: 1,
+		Active:   true,
+	}
+
+	first := base
+	first.CreatedAt = NewOptDateTime(parse(time.RFC3339, "2024-01-02T03:04:05+01:23"))
+	second := base
+	second.CreatedAt = NewOptDateTime(parse(time.RFC3339, "2024-01-02T03:04:05+01:23"))
+	if err := validateUniqueComprehensiveItem([]ComprehensiveItem{first, second}); err == nil {
+		t.Fatal("expected duplicate error for identical timestamps parsed separately")
+	}
+
+	fractional := base
+	fractional.CreatedAt = NewOptDateTime(parse(time.RFC3339Nano, "2024-01-02T03:04:05.5+01:23"))
+	if err := validateUniqueComprehensiveItem([]ComprehensiveItem{first, fractional}); err != nil {
+		t.Fatalf("timestamps differing in fractional seconds must stay distinct: %v", err)
+	}
+
+	shifted := base
+	shifted.CreatedAt = NewOptDateTime(parse(time.RFC3339, "2024-01-02T01:41:05Z"))
+	if err := validateUniqueComprehensiveItem([]ComprehensiveItem{first, shifted}); err != nil {
+		t.Fatalf("same instant with a different offset must stay distinct: %v", err)
+	}
+}
+
+// An absent optional byte payload is nil, while a present empty payload is
+// an empty non-nil slice, and the two must stay distinct.
+func TestValidateUniqueComprehensiveItem_AbsentVersusEmptyPayload(t *testing.T) {
+	base := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Payloaded",
+		Priority: 1,
+		Active:   true,
+	}
+
+	absent := base
+	present := base
+	present.Payload = []byte{}
+	if err := validateUniqueComprehensiveItem([]ComprehensiveItem{absent, present}); err != nil {
+		t.Fatalf("absent and present empty payloads must stay distinct: %v", err)
+	}
+
+	left := base
+	left.Payload = []byte{0x01}
+	right := base
+	right.Payload = []byte{0x01}
+	if err := validateUniqueComprehensiveItem([]ComprehensiveItem{left, right}); err == nil {
+		t.Fatal("expected duplicate error for identical payloads")
 	}
 }

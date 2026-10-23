@@ -47,6 +47,8 @@ func (s *AddGridBatchReqItem) SetLabel(val OptString) {
 	s.Label = val
 }
 
+type Blob []byte
+
 // Ref: #/components/schemas/Collection
 type Collection struct {
 	Grids       []Grid                      `json:"grids"`
@@ -57,6 +59,8 @@ type Collection struct {
 	FreeMatrix  [][]jx.Raw                  `json:"freeMatrix"`
 	FreeTagsets []CollectionFreeTagsetsItem `json:"freeTagsets"`
 	Annotations []FreeForm                  `json:"annotations"`
+	FreeGrids   [][]FreeForm                `json:"freeGrids"`
+	BlobMatrix  [][]Blob                    `json:"blobMatrix"`
 	Records     []Record                    `json:"records"`
 }
 
@@ -98,6 +102,16 @@ func (s *Collection) GetFreeTagsets() []CollectionFreeTagsetsItem {
 // GetAnnotations returns the value of Annotations.
 func (s *Collection) GetAnnotations() []FreeForm {
 	return s.Annotations
+}
+
+// GetFreeGrids returns the value of FreeGrids.
+func (s *Collection) GetFreeGrids() [][]FreeForm {
+	return s.FreeGrids
+}
+
+// GetBlobMatrix returns the value of BlobMatrix.
+func (s *Collection) GetBlobMatrix() [][]Blob {
+	return s.BlobMatrix
 }
 
 // GetRecords returns the value of Records.
@@ -143,6 +157,16 @@ func (s *Collection) SetFreeTagsets(val []CollectionFreeTagsetsItem) {
 // SetAnnotations sets the value of Annotations.
 func (s *Collection) SetAnnotations(val []FreeForm) {
 	s.Annotations = val
+}
+
+// SetFreeGrids sets the value of FreeGrids.
+func (s *Collection) SetFreeGrids(val [][]FreeForm) {
+	s.FreeGrids = val
+}
+
+// SetBlobMatrix sets the value of BlobMatrix.
+func (s *Collection) SetBlobMatrix(val [][]Blob) {
+	s.BlobMatrix = val
 }
 
 // SetRecords sets the value of Records.

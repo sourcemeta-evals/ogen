@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: Anonymous UniqueItems Array Compile Test
+  version: 1.0.0
+  description: |
+    The only validator in this document is the uniqueItems constraint on an
+    anonymous request body array, so generated equality helpers must be
+    emitted even when no named type carries field validators.
+
+paths:
+  /entries/batch:
+    post:
+      operationId: addEntryBatch
+      summary: Anonymous request body array with unique inline object items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              uniqueItems: true
+              items:
+                type: object
+                required:
+                  - key
+                  - label
+                properties:
+                  key:
+                    type: string
+                  label:
+                    type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: integer

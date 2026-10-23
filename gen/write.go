@@ -363,6 +363,13 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName string) error {
 			return g.generateUniqueValidators(fs, pkgName)
 		})
 	}
+	// Generate semantic Equal() methods for named raw JSON aliases reachable
+	// from uniqueItems comparison
+	if len(g.rawJSONAliases) > 0 {
+		grp.Go(func() error {
+			return g.generateRawJSONEqualMethods(fs, pkgName)
+		})
+	}
 
 	return grp.Wait()
 }

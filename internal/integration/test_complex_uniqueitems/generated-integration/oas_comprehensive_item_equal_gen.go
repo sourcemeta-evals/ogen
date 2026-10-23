@@ -2,7 +2,11 @@
 
 package api
 
-import "github.com/ogen-go/ogen/validate"
+import (
+	"bytes"
+
+	"github.com/ogen-go/ogen/validate"
+)
 
 // Equal compares two ComprehensiveItem instances for equality.
 // The depth parameter prevents infinite recursion on nested objects.
@@ -57,6 +61,22 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 				return false
 			}
 		}
+	}
+	// Compare optional field: CreatedAt
+	if a.CreatedAt.Set != b.CreatedAt.Set {
+		return false
+	}
+	if a.CreatedAt.Set {
+		if !validate.EqualDeep(a.CreatedAt.Value, b.CreatedAt.Value) {
+			return false
+		}
+	}
+	// Compare byte slice field: Payload
+	if (a.Payload == nil) != (b.Payload == nil) {
+		return false
+	}
+	if !bytes.Equal(a.Payload, b.Payload) {
+		return false
 	}
 	// Compare optional field: Status
 	if a.Status.Set != b.Status.Set {

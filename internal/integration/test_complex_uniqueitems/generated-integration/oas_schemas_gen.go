@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/go-faster/errors"
 )
 
@@ -23,6 +25,10 @@ type ComprehensiveItem struct {
 	Score OptFloat64 `json:"score"`
 	// External system ID (nullable).
 	ExternalId OptNilString `json:"externalId"`
+	// Creation timestamp.
+	CreatedAt OptDateTime `json:"createdAt"`
+	// Optional binary payload.
+	Payload []byte `json:"payload"`
 	// Item status.
 	Status OptComprehensiveItemStatus `json:"status"`
 	// Optional category.
@@ -78,6 +84,16 @@ func (s *ComprehensiveItem) GetScore() OptFloat64 {
 // GetExternalId returns the value of ExternalId.
 func (s *ComprehensiveItem) GetExternalId() OptNilString {
 	return s.ExternalId
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ComprehensiveItem) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetPayload returns the value of Payload.
+func (s *ComprehensiveItem) GetPayload() []byte {
+	return s.Payload
 }
 
 // GetStatus returns the value of Status.
@@ -163,6 +179,16 @@ func (s *ComprehensiveItem) SetScore(val OptFloat64) {
 // SetExternalId sets the value of ExternalId.
 func (s *ComprehensiveItem) SetExternalId(val OptNilString) {
 	s.ExternalId = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ComprehensiveItem) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetPayload sets the value of Payload.
+func (s *ComprehensiveItem) SetPayload(val []byte) {
+	s.Payload = val
 }
 
 // SetStatus sets the value of Status.
@@ -779,6 +805,52 @@ func (o OptConfigurationSettings) Get() (v ConfigurationSettings, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptConfigurationSettings) Or(d ConfigurationSettings) ConfigurationSettings {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptDateTime returns new OptDateTime with value set to v.
+func NewOptDateTime(v time.Time) OptDateTime {
+	return OptDateTime{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDateTime is optional time.Time.
+type OptDateTime struct {
+	Value time.Time
+	Set   bool
+}
+
+// IsSet returns true if OptDateTime was set.
+func (o OptDateTime) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDateTime) Reset() {
+	var v time.Time
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDateTime) SetTo(v time.Time) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDateTime) Get() (v time.Time, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDateTime) Or(d time.Time) time.Time {
 	if v, ok := o.Get(); ok {
 		return v
 	}

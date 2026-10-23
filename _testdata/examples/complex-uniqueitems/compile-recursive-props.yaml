@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Recursive AdditionalProperties UniqueItems Compile Test
+  version: 1.0.0
+  description: |
+    An object whose additionalProperties values are unique arrays of the
+    object itself. Equality collection must tolerate the recursive type
+    graph without dereferencing incompletely constructed map items.
+
+paths:
+  /nodes:
+    post:
+      operationId: addNode
+      summary: Store a recursive node
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecursiveNode'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: integer
+
+components:
+  schemas:
+    RecursiveNode:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        children:
+          type: object
+          additionalProperties:
+            type: array
+            uniqueItems: true
+            items:
+              $ref: '#/components/schemas/RecursiveNode'

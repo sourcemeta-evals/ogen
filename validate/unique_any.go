@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/big"
 	"reflect"
+	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
@@ -17,6 +18,7 @@ import (
 var (
 	jsonRawType   = reflect.TypeOf(jx.Raw(nil))
 	byteSliceType = reflect.TypeOf([]byte(nil))
+	timeType      = reflect.TypeOf(time.Time{})
 )
 
 // isJSONRawType reports whether a reflect type holds raw JSON bytes: jx.Raw
@@ -53,6 +55,19 @@ func deepEqualValue(a, b reflect.Value) (bool, error) {
 	}
 	if isJSONRawType(a.Type()) {
 		return equalJSONRaw(a.Bytes(), b.Bytes())
+	}
+	if a.Type() == timeType {
+		// == and reflect.DeepEqual also compare the location pointer, so
+		// identical decoded timestamps with a numeric zone offset would not
+		// match, while Equal alone ignores the offset, so distinct
+		// representations of one instant would collapse
+		left, right := a.Interface().(time.Time), b.Interface().(time.Time)
+		if !left.Equal(right) {
+			return false, nil
+		}
+		_, leftOffset := left.Zone()
+		_, rightOffset := right.Zone()
+		return leftOffset == rightOffset, nil
 	}
 	switch a.Kind() {
 	case reflect.Pointer, reflect.Interface:
@@ -217,41 +232,46 @@ func equalJSONDecoded(left, right *jx.Decoder) (bool, error) {
 		}
 		return !riter.Next(), nil
 	case jx.Object:
-		members := map[string]jx.Raw{}
-		if err := left.ObjBytes(func(d *jx.Decoder, key []byte) error {
-			raw, err := d.Raw()
-			if err != nil {
-				return err
+		collect := func(d *jx.Decoder) (map[string]jx.Raw, int, error) {
+			members := map[string]jx.Raw{}
+			count := 0
+			if err := d.ObjBytes(func(d *jx.Decoder, key []byte) error {
+				raw, err := d.Raw()
+				if err != nil {
+					return err
+				}
+				members[string(key)] = raw
+				count++
+				return nil
+			}); err != nil {
+				return nil, 0, err
 			}
-			members[string(key)] = raw
-			return nil
-		}); err != nil {
-			return false, err
+			return members, count, nil
 		}
-		matched := 0
-		riter, err := right.ObjIter()
+		lmembers, lcount, err := collect(left)
 		if err != nil {
 			return false, err
 		}
-		for riter.Next() {
-			lraw, ok := members[string(riter.Key())]
+		rmembers, rcount, err := collect(right)
+		if err != nil {
+			return false, err
+		}
+		// Repeated keys collapse to their last value on both sides, so the
+		// verdict does not depend on operand order
+		if lcount != rcount || len(lmembers) != len(rmembers) {
+			return false, nil
+		}
+		for key, lraw := range lmembers {
+			rraw, ok := rmembers[key]
 			if !ok {
 				return false, nil
-			}
-			matched++
-			rraw, err := right.Raw()
-			if err != nil {
-				return false, err
 			}
 			equal, err := equalJSONRaw(lraw, rraw)
 			if err != nil || !equal {
 				return false, err
 			}
 		}
-		if err := riter.Err(); err != nil {
-			return false, err
-		}
-		return matched == len(members), nil
+		return true, nil
 	default:
 		return false, errors.New("unexpected JSON type")
 	}

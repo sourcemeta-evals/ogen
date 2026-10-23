@@ -2,6 +2,7 @@ package validate
 
 import (
 	"testing"
+	"time"
 
 	"github.com/go-faster/jx"
 	"github.com/stretchr/testify/require"
@@ -82,6 +83,38 @@ func TestUniqueItemsAny(t *testing.T) {
 			{ID: 1, Extra: namedRaw(`{"a":1}`)},
 			{ID: 1, Extra: namedRaw(`{"a":2}`)},
 		}))
+	})
+	t.Run("TimestampsCompareByInstantAndOffset", func(t *testing.T) {
+		parse := func(layout, value string) time.Time {
+			parsed, err := time.Parse(layout, value)
+			require.NoError(t, err)
+			return parsed
+		}
+		type stamped struct {
+			ID string
+			At time.Time
+		}
+		// Each parse of a numeric offset allocates a new location, so
+		// reflect.DeepEqual would miss this duplicate
+		require.Error(t, UniqueItemsAny([]stamped{
+			{ID: "a", At: parse(time.RFC3339, "2024-01-02T03:04:05+01:23")},
+			{ID: "a", At: parse(time.RFC3339, "2024-01-02T03:04:05+01:23")},
+		}))
+		require.NoError(t, UniqueItemsAny([]stamped{
+			{ID: "a", At: parse(time.RFC3339, "2024-01-02T03:04:05+01:23")},
+			{ID: "a", At: parse(time.RFC3339Nano, "2024-01-02T03:04:05.5+01:23")},
+		}))
+		require.NoError(t, UniqueItemsAny([]stamped{
+			{ID: "a", At: parse(time.RFC3339, "2024-01-02T03:04:05+01:23")},
+			{ID: "a", At: parse(time.RFC3339, "2024-01-02T01:41:05Z")},
+		}))
+	})
+	t.Run("RepeatedRawMembersAreOrderIndependent", func(t *testing.T) {
+		repeated := thing{ID: 1, Extra: jx.Raw(`{"a":1,"a":1}`)}
+		single := thing{ID: 1, Extra: jx.Raw(`{"a":1}`)}
+		forward := UniqueItemsAny([]thing{repeated, single})
+		backward := UniqueItemsAny([]thing{single, repeated})
+		require.Equal(t, forward == nil, backward == nil)
 	})
 	t.Run("NumberBeyondExactComparison", func(t *testing.T) {
 		err := UniqueItemsAny([]thing{

@@ -2,7 +2,6 @@ package validate
 
 import (
 	"github.com/go-faster/errors"
-	"reflect"
 )
 
 // Array validates array length.
@@ -63,14 +62,19 @@ func UniqueItems[S ~[]T, T comparable](arr S) error {
 	return nil
 }
 
-// UniqueItemsAny ensures given array has no duplicates using reflect.DeepEqual.
+// UniqueItemsAny ensures given array has no duplicates using deep comparison
+// that treats raw JSON payloads as JSON values rather than bytes.
 func UniqueItemsAny[S ~[]T, T any](arr S) error {
 	if len(arr) < 2 {
 		return nil
 	}
 	for i := range arr {
 		for j := i + 1; j < len(arr); j++ {
-			if reflect.DeepEqual(arr[i], arr[j]) {
+			equal, err := deepEqualAny(arr[i], arr[j])
+			if err != nil {
+				return err
+			}
+			if equal {
 				return errors.Errorf("duplicate element [%d]", i)
 			}
 		}

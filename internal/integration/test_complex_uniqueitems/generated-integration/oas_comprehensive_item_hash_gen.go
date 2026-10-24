@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
+	"sort"
 
 	"github.com/ogen-go/ogen/validate"
 )
@@ -88,6 +89,21 @@ func (a ComprehensiveItem) Hash(depth int) uint64 {
 	} else {
 		h.Write([]byte{0})
 	}
+	// Hash map field: Ratings (sorted keys)
+	keysRatings := make([]string, 0, len(a.Ratings))
+	for k := range a.Ratings {
+		keysRatings = append(keysRatings, k)
+	}
+	sort.Strings(keysRatings)
+	for _, k := range keysRatings {
+		h.Write([]byte(k))
+		v := a.Ratings[k]
+		if v == 0 {
+			v = 0
+		}
+		h.Write([]byte(fmt.Sprintf("%v", v)))
+	}
+	// Array field Rows is excluded from the hash: its elements compare semantically
 	// Hash optional field: Status
 	if a.Status.Set {
 		h.Write([]byte{1})

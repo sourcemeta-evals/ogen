@@ -34,6 +34,10 @@ type ComprehensiveItem struct {
 	Amount OptStringDecimal `json:"amount"`
 	// Optional rating.
 	Rating OptRating `json:"rating"`
+	// Per-category ratings.
+	Ratings ComprehensiveItemRatings `json:"ratings"`
+	// Nested rows referenced through a named array schema.
+	Rows Matrix `json:"rows"`
 	// Item status.
 	Status OptComprehensiveItemStatus `json:"status"`
 	// Optional category.
@@ -109,6 +113,16 @@ func (s *ComprehensiveItem) GetAmount() OptStringDecimal {
 // GetRating returns the value of Rating.
 func (s *ComprehensiveItem) GetRating() OptRating {
 	return s.Rating
+}
+
+// GetRatings returns the value of Ratings.
+func (s *ComprehensiveItem) GetRatings() ComprehensiveItemRatings {
+	return s.Ratings
+}
+
+// GetRows returns the value of Rows.
+func (s *ComprehensiveItem) GetRows() Matrix {
+	return s.Rows
 }
 
 // GetStatus returns the value of Status.
@@ -214,6 +228,16 @@ func (s *ComprehensiveItem) SetAmount(val OptStringDecimal) {
 // SetRating sets the value of Rating.
 func (s *ComprehensiveItem) SetRating(val OptRating) {
 	s.Rating = val
+}
+
+// SetRatings sets the value of Ratings.
+func (s *ComprehensiveItem) SetRatings(val ComprehensiveItemRatings) {
+	s.Ratings = val
+}
+
+// SetRows sets the value of Rows.
+func (s *ComprehensiveItem) SetRows(val Matrix) {
+	s.Rows = val
 }
 
 // SetStatus sets the value of Status.
@@ -334,6 +358,18 @@ func (s *ComprehensiveItemMetadata) init() ComprehensiveItemMetadata {
 	m := *s
 	if m == nil {
 		m = map[string]string{}
+		*s = m
+	}
+	return m
+}
+
+// Per-category ratings.
+type ComprehensiveItemRatings map[string]Rating
+
+func (s *ComprehensiveItemRatings) init() ComprehensiveItemRatings {
+	m := *s
+	if m == nil {
+		m = map[string]Rating{}
 		*s = m
 	}
 	return m
@@ -513,6 +549,8 @@ func (s *FeatureParameters) init() FeatureParameters {
 	}
 	return m
 }
+
+type Matrix [][]string
 
 // NewOptBool returns new OptBool with value set to v.
 func NewOptBool(v bool) OptBool {

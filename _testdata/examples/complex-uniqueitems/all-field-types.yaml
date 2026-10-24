@@ -53,6 +53,8 @@ components:
         - name
         - priority
         - active
+        - ratings
+        - rows
       properties:
         # Primitive fields (required)
         id:
@@ -105,6 +107,18 @@ components:
         rating:
           $ref: '#/components/schemas/Rating'
           description: Optional rating
+
+        # Map whose values reference a named float alias
+        ratings:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Rating'
+          description: Per-category ratings
+
+        # Required field referencing a named array of string arrays
+        rows:
+          $ref: '#/components/schemas/Matrix'
+          description: Nested rows referenced through a named array schema
 
         # Enum field
         status:
@@ -171,6 +185,14 @@ components:
     Rating:
       type: number
       description: Rating value referenced as a named scalar
+
+    Matrix:
+      type: array
+      description: Named array of string arrays
+      items:
+        type: array
+        items:
+          type: string
 
     User:
       type: object

@@ -68,12 +68,6 @@ type FieldEqualitySpec struct {
 	// operator compares an internal pointer
 	IsDecimal bool
 
-	// IsStringDecimal indicates a decimal field whose schema declares a JSON
-	// string, so the decoded coefficient and exponent are both part of the
-	// value and numerically equal decimals with different scales stay
-	// distinct
-	IsStringDecimal bool
-
 	// IsFloat indicates the field value (or the wrapped or pointed-to
 	// value) is a floating point number, resolved through alias chains
 	// because named scalar types do not expose float32/float64 in their Go

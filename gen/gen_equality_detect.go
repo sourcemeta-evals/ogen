@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"github.com/ogen-go/ogen/gen/ir"
-	"github.com/ogen-go/ogen/jsonschema"
 )
 
 const (
@@ -366,10 +365,10 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				if mapType.Item.Kind == ir.KindStruct {
 					isMapOfStructs = true
 				}
-				// Resolved from the IR because named map types render their
-				// type name, not map[...] syntax, in the Go representation
-				if mapType.Item.Kind == ir.KindPrimitive &&
-					(mapType.Item.Primitive == ir.Float32 || mapType.Item.Primitive == ir.Float64) {
+				// Resolved from the IR because named map and value types
+				// render their type name, not map[...] or float syntax, in
+				// the Go representation
+				if resolvesToFloat(mapType.Item) {
 					isMapOfFloats = true
 				}
 			}
@@ -408,6 +407,13 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			elemArray := arrayType
 			if elemArray.Kind != ir.KindArray && unwrapped != nil && unwrapped.Kind == ir.KindArray {
 				elemArray = unwrapped
+			}
+			// Referenced array schemas are aliases of their array type, so
+			// classification must resolve them like categorizeFieldType does,
+			// or named nested arrays would select the != emission that does
+			// not compile for slice elements
+			for elemArray.Kind == ir.KindAlias && elemArray.AliasTo != nil {
+				elemArray = elemArray.AliasTo
 			}
 			if elemArray.Kind == ir.KindArray && elemArray.Item != nil && !isArrayOfStructs {
 				elem := elemArray.Item
@@ -468,12 +474,6 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				}
 			}
 
-			// A decimal declared as a JSON string keeps its decoded scale:
-			// "1.0" and "1.00" are different strings, so numerically equal
-			// decimals with different exponents must stay distinct
-			isStringDecimal := isDecimal &&
-				scalarType.Schema != nil && scalarType.Schema.Type == jsonschema.String
-
 			// Floating point values format negative zero differently from
 			// positive zero, so hashing must normalize them. Named scalar
 			// types render their alias name, not float32/float64, in the Go
@@ -526,7 +526,6 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				IsRawJSON:              isRawJSON,
 				IsURL:                  isURL,
 				IsDecimal:              isDecimal,
-				IsStringDecimal:        isStringDecimal,
 				IsFloat:                isFloat,
 				IsFloatArray:           isFloatArray,
 				IsDeepOnly:             isDeepOnly,

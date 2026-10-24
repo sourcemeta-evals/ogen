@@ -11,22 +11,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// decodeTuple decodes a JSON array into the generated tuple type through
-// its public decoder, like a request payload would be.
-func decodeTuple(t *testing.T, raw string) TupleRoot {
-	t.Helper()
-	var root TupleRoot
-	require.NoError(t, root.Decode(jx.DecodeStr(raw)))
-	return root
+// validateValue runs the generated Validate method when the type has one.
+// Solutions that enforce uniqueness while decoding need no Validate method,
+// so its absence is not a failure by itself.
+func validateValue(root *TupleRoot) error {
+	if validator, ok := any(root).(interface{ Validate() error }); ok {
+		return validator.Validate()
+	}
+	return nil
 }
 
 // TestTupleUniqueItemsEnforced runs only when generation admits the tuple
 // schema: the admitted uniqueItems constraint must reject repeated elements
-// through the public Validate method and accept distinct elements.
+// during decoding or through the public Validate method, and must accept
+// distinct elements.
 func TestTupleUniqueItemsEnforced(t *testing.T) {
-	duplicate := decodeTuple(t, `["x","x"]`)
-	require.Error(t, duplicate.Validate())
+	var duplicate TupleRoot
+	err := duplicate.Decode(jx.DecodeStr(`["x","x"]`))
+	if err == nil {
+		err = validateValue(&duplicate)
+	}
+	require.Error(t, err, "duplicate tuple elements must fail during decoding or validation")
 
-	distinct := decodeTuple(t, `["x","y"]`)
-	require.NoError(t, distinct.Validate())
+	var distinct TupleRoot
+	require.NoError(t, distinct.Decode(jx.DecodeStr(`["x","y"]`)))
+	require.NoError(t, validateValue(&distinct))
 }

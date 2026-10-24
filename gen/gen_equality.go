@@ -95,15 +95,8 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\t}\n")
 		case field.IsDecimal:
 			// decimal.Decimal contains a pointer, so == compares identity
-			if field.IsStringDecimal {
-				// String-declared decimals keep their decoded scale: "1.0"
-				// and "1.00" are different strings and must stay distinct
-				fmt.Fprintf(b, "\t// Compare string decimal field by value and scale: %s\n", field.FieldName)
-				fmt.Fprintf(b, "\tif !a.%s.Equal(b.%s) || a.%s.Exponent() != b.%s.Exponent() {\n", field.FieldName, field.FieldName, field.FieldName, field.FieldName)
-			} else {
-				fmt.Fprintf(b, "\t// Compare decimal field by value: %s\n", field.FieldName)
-				fmt.Fprintf(b, "\tif !a.%s.Equal(b.%s) {\n", field.FieldName, field.FieldName)
-			}
+			fmt.Fprintf(b, "\t// Compare decimal field by value: %s\n", field.FieldName)
+			fmt.Fprintf(b, "\tif !a.%s.Equal(b.%s) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\treturn false\n")
 			fmt.Fprintf(b, "\t}\n")
 		case field.IsDeepOnly:
@@ -168,13 +161,8 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsDecimal:
-			// Optional wrapper around decimal.Decimal - compare by value,
-			// including the decoded scale for string-declared decimals
-			if field.IsStringDecimal {
-				fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) || a.%s.Value.Exponent() != b.%s.Value.Exponent() {\n", valueIndent, field.FieldName, field.FieldName, field.FieldName, field.FieldName)
-			} else {
-				fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
-			}
+			// Optional wrapper around decimal.Decimal - compare by value
+			fmt.Fprintf(b, "%sif !a.%s.Value.Equal(b.%s.Value) {\n", valueIndent, field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "%s\treturn false\n", valueIndent)
 			fmt.Fprintf(b, "%s}\n", valueIndent)
 		case field.IsDeepOnly:
@@ -234,13 +222,8 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 			fmt.Fprintf(b, "\t\t\treturn false\n")
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsDecimal:
-			// Nullable wrapper around decimal.Decimal - compare by value,
-			// including the decoded scale for string-declared decimals
-			if field.IsStringDecimal {
-				fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) || a.%s.Value.Exponent() != b.%s.Value.Exponent() {\n", field.FieldName, field.FieldName, field.FieldName, field.FieldName)
-			} else {
-				fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) {\n", field.FieldName, field.FieldName)
-			}
+			// Nullable wrapper around decimal.Decimal - compare by value
+			fmt.Fprintf(b, "\t\tif !a.%s.Value.Equal(b.%s.Value) {\n", field.FieldName, field.FieldName)
 			fmt.Fprintf(b, "\t\t\treturn false\n")
 			fmt.Fprintf(b, "\t\t}\n")
 		case field.IsDeepOnly:

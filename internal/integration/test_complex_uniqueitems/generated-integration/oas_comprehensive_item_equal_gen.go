@@ -83,7 +83,7 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 		return false
 	}
 	if a.Amount.Set {
-		if !a.Amount.Value.Equal(b.Amount.Value) || a.Amount.Value.Exponent() != b.Amount.Value.Exponent() {
+		if !a.Amount.Value.Equal(b.Amount.Value) {
 			return false
 		}
 	}
@@ -95,6 +95,19 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 		if a.Rating.Value != b.Rating.Value {
 			return false
 		}
+	}
+	// Compare map field: Ratings
+	if len(a.Ratings) != len(b.Ratings) {
+		return false
+	}
+	for k, v := range a.Ratings {
+		if bv, ok := b.Ratings[k]; !ok || v != bv {
+			return false
+		}
+	}
+	// Compare array field: Rows
+	if !validate.EqualDeep(a.Rows, b.Rows) {
+		return false
 	}
 	// Compare optional field: Status
 	if a.Status.Set != b.Status.Set {

@@ -79,6 +79,14 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		e.FieldStart("ratings")
+		s.Ratings.Encode(e)
+	}
+	{
+		e.FieldStart("rows")
+		s.Rows.Encode(e)
+	}
+	{
 		if s.Status.Set {
 			e.FieldStart("status")
 			s.Status.Encode(e)
@@ -152,7 +160,7 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfComprehensiveItem = [21]string{
+var jsonFieldsNameOfComprehensiveItem = [23]string{
 	0:  "id",
 	1:  "name",
 	2:  "priority",
@@ -164,16 +172,18 @@ var jsonFieldsNameOfComprehensiveItem = [21]string{
 	8:  "payload",
 	9:  "amount",
 	10: "rating",
-	11: "status",
-	12: "category",
-	13: "tags",
-	14: "labels",
-	15: "metadata",
-	16: "customFields",
-	17: "owner",
-	18: "assignee",
-	19: "watchers",
-	20: "configuration",
+	11: "ratings",
+	12: "rows",
+	13: "status",
+	14: "category",
+	15: "tags",
+	16: "labels",
+	17: "metadata",
+	18: "customFields",
+	19: "owner",
+	20: "assignee",
+	21: "watchers",
+	22: "configuration",
 }
 
 // Decode decodes ComprehensiveItem from json.
@@ -303,6 +313,26 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"rating\"")
+			}
+		case "ratings":
+			requiredBitSet[1] |= 1 << 3
+			if err := func() error {
+				if err := s.Ratings.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ratings\"")
+			}
+		case "rows":
+			requiredBitSet[1] |= 1 << 4
+			if err := func() error {
+				if err := s.Rows.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rows\"")
 			}
 		case "status":
 			if err := func() error {
@@ -440,7 +470,7 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [3]uint8{
 		0b00001111,
-		0b00000000,
+		0b00011000,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -637,6 +667,60 @@ func (s ComprehensiveItemMetadata) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ComprehensiveItemMetadata) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s ComprehensiveItemRatings) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s ComprehensiveItemRatings) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		elem.Encode(e)
+	}
+}
+
+// Decode decodes ComprehensiveItemRatings from json.
+func (s *ComprehensiveItemRatings) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ComprehensiveItemRatings to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem Rating
+		if err := func() error {
+			if err := elem.Decode(d); err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ComprehensiveItemRatings")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ComprehensiveItemRatings) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ComprehensiveItemRatings) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -1165,6 +1249,70 @@ func (s FeatureParameters) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *FeatureParameters) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes Matrix as json.
+func (s Matrix) Encode(e *jx.Encoder) {
+	unwrapped := [][]string(s)
+
+	e.ArrStart()
+	for _, elem := range unwrapped {
+		e.ArrStart()
+		for _, elem := range elem {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+	e.ArrEnd()
+}
+
+// Decode decodes Matrix from json.
+func (s *Matrix) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode Matrix to nil")
+	}
+	var unwrapped [][]string
+	if err := func() error {
+		unwrapped = make([][]string, 0)
+		if err := d.Arr(func(d *jx.Decoder) error {
+			var elem []string
+			elem = make([]string, 0)
+			if err := d.Arr(func(d *jx.Decoder) error {
+				var elemElem string
+				v, err := d.Str()
+				elemElem = string(v)
+				if err != nil {
+					return err
+				}
+				elem = append(elem, elemElem)
+				return nil
+			}); err != nil {
+				return err
+			}
+			unwrapped = append(unwrapped, elem)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = Matrix(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s Matrix) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *Matrix) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

@@ -334,10 +334,10 @@ func TestValidateUniqueComprehensiveItem_NegativeZeroScore(t *testing.T) {
 	}
 }
 
-// String-declared decimals keep their decoded scale: "1.0" and "1.00" are
-// different JSON strings, so they must stay distinct even though they are
-// numerically equal
-func TestValidateUniqueComprehensiveItem_StringDecimalScale(t *testing.T) {
+// Decimal-formatted values compare by numeric value after decoding, so
+// numerically equal values written with different scales, such as "1.0" and
+// "1.00", are duplicates, while different numeric values stay distinct
+func TestValidateUniqueComprehensiveItem_StringDecimalNumericEquality(t *testing.T) {
 	base := ComprehensiveItem{
 		ID:       "item-1",
 		Name:     "Base Item",
@@ -354,18 +354,84 @@ func TestValidateUniqueComprehensiveItem_StringDecimalScale(t *testing.T) {
 	twoDigitScale.Amount = NewOptStringDecimal(decimal.RequireFromString("1.00"))
 
 	err := validateUniqueComprehensiveItem([]ComprehensiveItem{oneDigitScale, twoDigitScale})
-	if err != nil {
-		t.Errorf("Expected decimal strings with different scales to stay distinct, got: %v", err)
-	}
-
-	duplicate := base
-	duplicate.Amount = NewOptStringDecimal(decimal.RequireFromString("1.0"))
-	err = validateUniqueComprehensiveItem([]ComprehensiveItem{oneDigitScale, duplicate})
 	if err == nil {
-		t.Error("Expected duplicate error for identical decimal strings")
+		t.Error("Expected duplicate error for numerically equal decimals")
 	}
 	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
 		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+
+	larger := base
+	larger.Amount = NewOptStringDecimal(decimal.RequireFromString("2.0"))
+	err = validateUniqueComprehensiveItem([]ComprehensiveItem{oneDigitScale, larger})
+	if err != nil {
+		t.Errorf("Expected distinct decimal values to pass, got: %v", err)
+	}
+}
+
+// Required maps whose values reference a named float alias must hash signed
+// zeros identically, or equal items land in different buckets and the
+// duplicate escapes detection
+func TestValidateUniqueComprehensiveItem_NegativeZeroRatingsMap(t *testing.T) {
+	itemWithPositiveZero := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Ratings:  ComprehensiveItemRatings{"overall": 0},
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	itemWithNegativeZero := itemWithPositiveZero
+	itemWithNegativeZero.Ratings = ComprehensiveItemRatings{"overall": Rating(math.Copysign(0, -1))}
+
+	err := validateUniqueComprehensiveItem([]ComprehensiveItem{itemWithPositiveZero, itemWithNegativeZero})
+	if err == nil {
+		t.Error("Expected duplicate error for items differing only in a map value zero sign")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+
+	itemWithOtherValue := itemWithPositiveZero
+	itemWithOtherValue.Ratings = ComprehensiveItemRatings{"overall": 1}
+	err = validateUniqueComprehensiveItem([]ComprehensiveItem{itemWithPositiveZero, itemWithOtherValue})
+	if err != nil {
+		t.Errorf("Expected distinct map values to pass, got: %v", err)
+	}
+}
+
+// A required field referencing a named array of string arrays must compare
+// by content, element by element
+func TestValidateUniqueComprehensiveItem_NestedRowsAlias(t *testing.T) {
+	base := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Rows:     Matrix{{"a", "b"}, {"c"}},
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	duplicate := base
+	duplicate.Rows = Matrix{{"a", "b"}, {"c"}}
+	err := validateUniqueComprehensiveItem([]ComprehensiveItem{base, duplicate})
+	if err == nil {
+		t.Error("Expected duplicate error for identical nested rows")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+
+	differentTail := base
+	differentTail.Rows = Matrix{{"a", "b"}, {"d"}}
+	err = validateUniqueComprehensiveItem([]ComprehensiveItem{base, differentTail})
+	if err != nil {
+		t.Errorf("Expected rows with different content to pass, got: %v", err)
 	}
 }
 

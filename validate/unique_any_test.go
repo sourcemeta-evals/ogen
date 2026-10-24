@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/go-faster/jx"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,6 +108,33 @@ func TestUniqueItemsAny(t *testing.T) {
 		require.NoError(t, UniqueItemsAny([]stamped{
 			{ID: "a", At: parse(time.RFC3339, "2024-01-02T03:04:05+01:23")},
 			{ID: "a", At: parse(time.RFC3339, "2024-01-02T01:41:05Z")},
+		}))
+	})
+	t.Run("DecimalsCompareNumerically", func(t *testing.T) {
+		// Generated decimal fields hold decimal.Decimal or defined types
+		// over it; both compare by numeric value, so equal values written
+		// with different scales deduplicate
+		type priced struct {
+			ID     string
+			Amount decimal.Decimal
+		}
+		require.Error(t, UniqueItemsAny([]priced{
+			{ID: "a", Amount: decimal.RequireFromString("1.0")},
+			{ID: "a", Amount: decimal.RequireFromString("1.00")},
+		}))
+		require.NoError(t, UniqueItemsAny([]priced{
+			{ID: "a", Amount: decimal.RequireFromString("1.0")},
+			{ID: "a", Amount: decimal.RequireFromString("1.01")},
+		}))
+
+		type money decimal.Decimal
+		type tagged struct {
+			ID     string
+			Amount money
+		}
+		require.Error(t, UniqueItemsAny([]tagged{
+			{ID: "a", Amount: money(decimal.RequireFromString("2.0"))},
+			{ID: "a", Amount: money(decimal.RequireFromString("2.00"))},
 		}))
 	})
 	t.Run("RepeatedRawMembersAreOrderIndependent", func(t *testing.T) {

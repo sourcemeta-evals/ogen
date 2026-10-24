@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+	"github.com/shopspring/decimal"
 )
 
 // jsonRawType is the reflect type of jx.Raw, which stores free-form JSON
@@ -19,6 +20,7 @@ var (
 	jsonRawType   = reflect.TypeOf(jx.Raw(nil))
 	byteSliceType = reflect.TypeOf([]byte(nil))
 	timeType      = reflect.TypeOf(time.Time{})
+	decimalType   = reflect.TypeOf(decimal.Decimal{})
 )
 
 // isJSONRawType reports whether a reflect type holds raw JSON bytes: jx.Raw
@@ -68,6 +70,15 @@ func deepEqualValue(a, b reflect.Value) (bool, error) {
 		_, leftOffset := left.Zone()
 		_, rightOffset := right.Zone()
 		return leftOffset == rightOffset, nil
+	}
+	if a.Type().Kind() == reflect.Struct && a.Type().ConvertibleTo(decimalType) {
+		// decimal.Decimal and defined types over it compare by numeric
+		// value: the struct fields hold a coefficient and exponent, so a
+		// field-by-field comparison would make numerically equal decimals
+		// with different scales distinct
+		left := a.Convert(decimalType).Interface().(decimal.Decimal)
+		right := b.Convert(decimalType).Interface().(decimal.Decimal)
+		return left.Equal(right), nil
 	}
 	switch a.Kind() {
 	case reflect.Pointer, reflect.Interface:

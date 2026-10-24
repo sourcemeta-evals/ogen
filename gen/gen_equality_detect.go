@@ -198,9 +198,14 @@ func (g *Generator) collectNestedTypes(t *ir.Type, visited map[string]bool) {
 		return
 	}
 
-	// Prevent infinite recursion on circular dependencies
-	if t.Name != "" && visited[t.Name] {
-		return
+	// Prevent infinite recursion on circular dependencies. Every named kind
+	// is marked, not only structs: a named map or array whose item refers
+	// back to itself would otherwise recurse until the stack is exhausted
+	if t.Name != "" {
+		if visited[t.Name] {
+			return
+		}
+		visited[t.Name] = true
 	}
 
 	switch t.Kind {
@@ -212,11 +217,6 @@ func (g *Generator) collectNestedTypes(t *ir.Type, visited map[string]bool) {
 		return
 
 	case ir.KindStruct:
-		// Mark as visited to prevent infinite recursion
-		if t.Name != "" {
-			visited[t.Name] = true
-		}
-
 		// Check if already collected
 		alreadyExists := false
 		for _, existing := range g.equalitySpecs {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-faster/jx"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,6 +82,20 @@ func TestGeneratedUniqueValidationSemantics(t *testing.T) {
 		require.NoError(t, validateEntries([]Entry{
 			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339, "2024-01-02T03:04:05+01:23"))},
 			{ID: "a", Name: "n", Stamp: NewOptDateTime(parseTime(t, time.RFC3339, "2024-01-02T01:41:05Z"))},
+		}))
+	})
+	t.Run("EquivalentDecimalsAreDuplicates", func(t *testing.T) {
+		// Decimal-formatted values compare by numeric value after decoding,
+		// so equal values written with different scales deduplicate
+		require.Error(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Amount: NewOptAmount(Amount(decimal.RequireFromString("1.0")))},
+			{ID: "a", Name: "n", Amount: NewOptAmount(Amount(decimal.RequireFromString("1.00")))},
+		}))
+	})
+	t.Run("DistinctDecimalsPass", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Amount: NewOptAmount(Amount(decimal.RequireFromString("1.0")))},
+			{ID: "a", Name: "n", Amount: NewOptAmount(Amount(decimal.RequireFromString("1.01")))},
 		}))
 	})
 	t.Run("EquivalentRawPayloadsAreDuplicates", func(t *testing.T) {

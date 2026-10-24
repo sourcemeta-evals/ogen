@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-faster/jx"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -314,6 +315,20 @@ func TestEqualDeep(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, utc.Equal(shifted))
 		require.False(t, EqualDeep(utc, shifted))
+	})
+	t.Run("DefinedDecimalTypesCompareNumerically", func(t *testing.T) {
+		type money decimal.Decimal
+		// Defined types over decimal.Decimal have no promoted Equal method,
+		// so without a dedicated case the stored scale would make these
+		// numerically equal values distinct
+		require.True(t, EqualDeep(
+			money(decimal.RequireFromString("1.0")),
+			money(decimal.RequireFromString("1.00")),
+		))
+		require.False(t, EqualDeep(
+			money(decimal.RequireFromString("1.0")),
+			money(decimal.RequireFromString("1.01")),
+		))
 	})
 	t.Run("PlainByteSliceStaysBytewise", func(t *testing.T) {
 		require.False(t, EqualDeep(

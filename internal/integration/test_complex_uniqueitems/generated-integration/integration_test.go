@@ -369,6 +369,41 @@ func TestValidateUniqueComprehensiveItem_StringDecimalNumericEquality(t *testing
 	}
 }
 
+// Referenced decimal schemas generate defined types over decimal.Decimal,
+// which must still compare by numeric value, so equal values written with
+// different scales are duplicates
+func TestValidateUniqueComprehensiveItem_ReferencedDecimalNumericEquality(t *testing.T) {
+	base := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	oneDigitScale := base
+	oneDigitScale.Price = NewOptPrice(Price(decimal.RequireFromString("1.0")))
+	twoDigitScale := base
+	twoDigitScale.Price = NewOptPrice(Price(decimal.RequireFromString("1.00")))
+
+	err := validateUniqueComprehensiveItem([]ComprehensiveItem{oneDigitScale, twoDigitScale})
+	if err == nil {
+		t.Error("Expected duplicate error for numerically equal referenced decimals")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+
+	larger := base
+	larger.Price = NewOptPrice(Price(decimal.RequireFromString("1.01")))
+	err = validateUniqueComprehensiveItem([]ComprehensiveItem{oneDigitScale, larger})
+	if err != nil {
+		t.Errorf("Expected distinct referenced decimal values to pass, got: %v", err)
+	}
+}
+
 // Required maps whose values reference a named float alias must hash signed
 // zeros identically, or equal items land in different buckets and the
 // duplicate escapes detection

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+	"github.com/shopspring/decimal"
 )
 
 // UniqueItemsDeep ensures given array has no duplicates, comparing elements
@@ -78,6 +79,7 @@ const equalDeepMaxDepth = 1000
 var (
 	rawJSONReflectType = reflect.TypeOf(jx.Raw(nil))
 	timeReflectType    = reflect.TypeOf(time.Time{})
+	decimalReflectType = reflect.TypeOf(decimal.Decimal{})
 	boolReflectType    = reflect.TypeOf(false)
 	intReflectType     = reflect.TypeOf(0)
 )
@@ -101,6 +103,16 @@ func equalDeepValue(a, b reflect.Value, depth int) bool {
 	}
 	if t == timeReflectType {
 		return EqualTime(a.Interface().(time.Time), b.Interface().(time.Time))
+	}
+	if t.Kind() == reflect.Struct && t.ConvertibleTo(decimalReflectType) {
+		// decimal.Decimal and defined types over it, such as a referenced
+		// decimal schema, compare by numeric value. Defined types have no
+		// promoted Equal method, so without this case reflection would fall
+		// back to comparing the stored coefficient and exponent, making
+		// numerically equal decimals with different scales distinct
+		left := a.Convert(decimalReflectType).Interface().(decimal.Decimal)
+		right := b.Convert(decimalReflectType).Interface().(decimal.Decimal)
+		return left.Equal(right)
 	}
 	// Generated wrapper methods continue the shared recursion budget, so
 	// cyclic values cannot bypass the depth limit by restarting it at every

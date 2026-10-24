@@ -11,6 +11,7 @@ import (
 	"github.com/go-faster/jx"
 	"github.com/ogen-go/ogen/json"
 	"github.com/ogen-go/ogen/validate"
+	"github.com/shopspring/decimal"
 )
 
 // Encode implements json.Marshaler.
@@ -81,6 +82,12 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("ratings")
 		s.Ratings.Encode(e)
+	}
+	{
+		if s.Price.Set {
+			e.FieldStart("price")
+			s.Price.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("rows")
@@ -160,7 +167,7 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfComprehensiveItem = [23]string{
+var jsonFieldsNameOfComprehensiveItem = [24]string{
 	0:  "id",
 	1:  "name",
 	2:  "priority",
@@ -173,17 +180,18 @@ var jsonFieldsNameOfComprehensiveItem = [23]string{
 	9:  "amount",
 	10: "rating",
 	11: "ratings",
-	12: "rows",
-	13: "status",
-	14: "category",
-	15: "tags",
-	16: "labels",
-	17: "metadata",
-	18: "customFields",
-	19: "owner",
-	20: "assignee",
-	21: "watchers",
-	22: "configuration",
+	12: "price",
+	13: "rows",
+	14: "status",
+	15: "category",
+	16: "tags",
+	17: "labels",
+	18: "metadata",
+	19: "customFields",
+	20: "owner",
+	21: "assignee",
+	22: "watchers",
+	23: "configuration",
 }
 
 // Decode decodes ComprehensiveItem from json.
@@ -324,8 +332,18 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"ratings\"")
 			}
+		case "price":
+			if err := func() error {
+				s.Price.Reset()
+				if err := s.Price.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"price\"")
+			}
 		case "rows":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				if err := s.Rows.Decode(d); err != nil {
 					return err
@@ -470,7 +488,7 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [3]uint8{
 		0b00001111,
-		0b00011000,
+		0b00101000,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -1743,6 +1761,39 @@ func (s *OptNilString) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes Price as json.
+func (o OptPrice) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes Price from json.
+func (o *OptPrice) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptPrice to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptPrice) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptPrice) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes Rating as json.
 func (o OptRating) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -1875,6 +1926,46 @@ func (s OptUser) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptUser) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes Price as json.
+func (s Price) Encode(e *jx.Encoder) {
+	unwrapped := decimal.Decimal(s)
+
+	json.EncodeStringDecimal(e, unwrapped)
+}
+
+// Decode decodes Price from json.
+func (s *Price) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode Price to nil")
+	}
+	var unwrapped decimal.Decimal
+	if err := func() error {
+		v, err := json.DecodeStringDecimal(d)
+		unwrapped = v
+		if err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = Price(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s Price) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *Price) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

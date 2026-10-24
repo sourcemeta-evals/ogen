@@ -69,6 +69,13 @@ components:
             uniqueItems: true
             items:
               $ref: '#/components/schemas/RecursiveNode'
+        links:
+          $ref: '#/components/schemas/LinkMap'
+    LinkMap:
+      type: object
+      description: Named map whose values reference the map itself
+      additionalProperties:
+        $ref: '#/components/schemas/LinkMap'
     RecursiveRoot:
       type: object
       required:

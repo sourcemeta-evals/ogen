@@ -36,6 +36,8 @@ type ComprehensiveItem struct {
 	Rating OptRating `json:"rating"`
 	// Per-category ratings.
 	Ratings ComprehensiveItemRatings `json:"ratings"`
+	// Optional referenced price.
+	Price OptPrice `json:"price"`
 	// Nested rows referenced through a named array schema.
 	Rows Matrix `json:"rows"`
 	// Item status.
@@ -118,6 +120,11 @@ func (s *ComprehensiveItem) GetRating() OptRating {
 // GetRatings returns the value of Ratings.
 func (s *ComprehensiveItem) GetRatings() ComprehensiveItemRatings {
 	return s.Ratings
+}
+
+// GetPrice returns the value of Price.
+func (s *ComprehensiveItem) GetPrice() OptPrice {
+	return s.Price
 }
 
 // GetRows returns the value of Rows.
@@ -233,6 +240,11 @@ func (s *ComprehensiveItem) SetRating(val OptRating) {
 // SetRatings sets the value of Ratings.
 func (s *ComprehensiveItem) SetRatings(val ComprehensiveItemRatings) {
 	s.Ratings = val
+}
+
+// SetPrice sets the value of Price.
+func (s *ComprehensiveItem) SetPrice(val OptPrice) {
+	s.Price = val
 }
 
 // SetRows sets the value of Rows.
@@ -1121,6 +1133,52 @@ func (o OptNilString) Or(d string) string {
 	return d
 }
 
+// NewOptPrice returns new OptPrice with value set to v.
+func NewOptPrice(v Price) OptPrice {
+	return OptPrice{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPrice is optional Price.
+type OptPrice struct {
+	Value Price
+	Set   bool
+}
+
+// IsSet returns true if OptPrice was set.
+func (o OptPrice) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPrice) Reset() {
+	var v Price
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPrice) SetTo(v Price) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPrice) Get() (v Price, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPrice) Or(d Price) Price {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptRating returns new OptRating with value set to v.
 func NewOptRating(v Rating) OptRating {
 	return OptRating{
@@ -1304,6 +1362,8 @@ func (o OptUser) Or(d User) User {
 	}
 	return d
 }
+
+type Price decimal.Decimal
 
 type Rating float64
 

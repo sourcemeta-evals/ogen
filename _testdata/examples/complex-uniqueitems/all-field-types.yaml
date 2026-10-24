@@ -115,6 +115,12 @@ components:
             $ref: '#/components/schemas/Rating'
           description: Per-category ratings
 
+        # Referenced decimal schema, generated as a defined type over
+        # decimal.Decimal
+        price:
+          $ref: '#/components/schemas/Price'
+          description: Optional referenced price
+
         # Required field referencing a named array of string arrays
         rows:
           $ref: '#/components/schemas/Matrix'
@@ -185,6 +191,11 @@ components:
     Rating:
       type: number
       description: Rating value referenced as a named scalar
+
+    Price:
+      type: string
+      format: decimal
+      description: Price kept as a decimal string
 
     Matrix:
       type: array

@@ -105,6 +105,15 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 			return false
 		}
 	}
+	// Compare optional field: Price
+	if a.Price.Set != b.Price.Set {
+		return false
+	}
+	if a.Price.Set {
+		if !validate.EqualDeep(a.Price.Value, b.Price.Value) {
+			return false
+		}
+	}
 	// Compare array field: Rows
 	if !validate.EqualDeep(a.Rows, b.Rows) {
 		return false

@@ -182,6 +182,21 @@ func (s OptNilString) EqualDepth(v OptNilString, depth int) bool {
 // parameter continues the deep-comparison recursion budget, so cyclic
 // values surface as a depth limit error instead of exhausting the
 // stack by restarting the budget at every wrapper boundary.
+func (s OptPrice) EqualDepth(v OptPrice, depth int) bool {
+	if s.Set != v.Set {
+		return false
+	}
+	if !s.Set {
+		return true
+	}
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
+}
+
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
 func (s OptRating) EqualDepth(v OptRating, depth int) bool {
 	if s.Set != v.Set {
 		return false

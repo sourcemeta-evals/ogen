@@ -103,6 +103,13 @@ func (a ComprehensiveItem) Hash(depth int) uint64 {
 		}
 		h.Write([]byte(fmt.Sprintf("%v", v)))
 	}
+	// Hash optional field: Price
+	if a.Price.Set {
+		h.Write([]byte{1})
+		// Wrapped value excluded from the hash: only its presence participates
+	} else {
+		h.Write([]byte{0})
+	}
 	// Array field Rows is excluded from the hash: its elements compare semantically
 	// Hash optional field: Status
 	if a.Status.Set {

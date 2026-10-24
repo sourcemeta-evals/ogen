@@ -89,8 +89,12 @@ func (g *Generator) collectFromType(t *ir.Type, visited map[string]bool, rootVis
 	}
 	rootVisited[t] = true
 
-	// Check if this is an array with unique items
-	if t.Kind == ir.KindArray && t.Schema != nil && t.Schema.UniqueItems {
+	// Check if this is an array with unique items. Sum variants carry the
+	// constraint only in their validators, propagated from the outer anyOf
+	// schema, so the validator flag counts like the schema flag: the
+	// validator template emits the uniqueness check from that flag and the
+	// equality helpers must exist wherever it does
+	if t.Kind == ir.KindArray && ((t.Schema != nil && t.Schema.UniqueItems) || t.Validators.Array.UniqueItems) {
 		if needsEqualityMethod(t.Item) {
 			// Create spec for the item type
 			spec := g.createEqualityMethodSpec(t.Item)
@@ -334,9 +338,16 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				isByteSlice = false
 			}
 
-			// Check if this is an array (either direct or wrapped in Optional/Nullable)
+			// Check if this is an array (either direct or wrapped in
+			// Optional/Nullable). Referenced array schemas are aliases that
+			// carry the NilSemantic marker themselves, so the kind resolves
+			// through the alias chain
+			dealiasedField := field.Type
+			for dealiasedField.Kind == ir.KindAlias && dealiasedField.AliasTo != nil {
+				dealiasedField = dealiasedField.AliasTo
+			}
 			isNilSemanticArray := false
-			if field.Type.Kind == ir.KindArray {
+			if dealiasedField.Kind == ir.KindArray {
 				isArray = true
 				// Optional and nullable arrays use nil itself to encode the
 				// absent or null state, which is distinct from an empty array
@@ -358,6 +369,7 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				mapType = unwrapped
 			}
 			isMapOfFloats := false
+			isMapOfFloatWrappers := false
 			if mapType.Kind == ir.KindMap && mapType.Item != nil {
 				// Only direct struct values have generated Equal and Hash
 				// methods. Wrapper values, such as nullable objects, have
@@ -370,6 +382,12 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				// the Go representation
 				if resolvesToFloat(mapType.Item) {
 					isMapOfFloats = true
+				}
+				// Nullable wrappers around floats compare equal across
+				// signed zeros through ==, but format differently, so their
+				// payloads must not feed the hash
+				if mapType.Item.Kind == ir.KindGeneric && resolvesToFloat(unwrapOptional(mapType.Item)) {
+					isMapOfFloatWrappers = true
 				}
 			}
 
@@ -513,6 +531,7 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 				IsMap:                  isMap,
 				IsMapOfStructs:         isMapOfStructs,
 				IsMapOfFloats:          isMapOfFloats,
+				IsMapOfFloatWrappers:   isMapOfFloatWrappers,
 				IsMapOfRaw:             isMapOfRaw,
 				IsMapOfDeep:            isMapOfDeep,
 				IsArray:                isArray,

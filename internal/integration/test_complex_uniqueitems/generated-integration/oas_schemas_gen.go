@@ -38,6 +38,10 @@ type ComprehensiveItem struct {
 	Ratings ComprehensiveItemRatings `json:"ratings"`
 	// Optional referenced price.
 	Price OptPrice `json:"price"`
+	// Optional referenced keyword list.
+	Keywords KeywordList `json:"keywords"`
+	// Per-category nullable scores.
+	Scores ComprehensiveItemScores `json:"scores"`
 	// Nested rows referenced through a named array schema.
 	Rows Matrix `json:"rows"`
 	// Item status.
@@ -125,6 +129,16 @@ func (s *ComprehensiveItem) GetRatings() ComprehensiveItemRatings {
 // GetPrice returns the value of Price.
 func (s *ComprehensiveItem) GetPrice() OptPrice {
 	return s.Price
+}
+
+// GetKeywords returns the value of Keywords.
+func (s *ComprehensiveItem) GetKeywords() KeywordList {
+	return s.Keywords
+}
+
+// GetScores returns the value of Scores.
+func (s *ComprehensiveItem) GetScores() ComprehensiveItemScores {
+	return s.Scores
 }
 
 // GetRows returns the value of Rows.
@@ -245,6 +259,16 @@ func (s *ComprehensiveItem) SetRatings(val ComprehensiveItemRatings) {
 // SetPrice sets the value of Price.
 func (s *ComprehensiveItem) SetPrice(val OptPrice) {
 	s.Price = val
+}
+
+// SetKeywords sets the value of Keywords.
+func (s *ComprehensiveItem) SetKeywords(val KeywordList) {
+	s.Keywords = val
+}
+
+// SetScores sets the value of Scores.
+func (s *ComprehensiveItem) SetScores(val ComprehensiveItemScores) {
+	s.Scores = val
 }
 
 // SetRows sets the value of Rows.
@@ -382,6 +406,18 @@ func (s *ComprehensiveItemRatings) init() ComprehensiveItemRatings {
 	m := *s
 	if m == nil {
 		m = map[string]Rating{}
+		*s = m
+	}
+	return m
+}
+
+// Per-category nullable scores.
+type ComprehensiveItemScores map[string]NilFloat64
+
+func (s *ComprehensiveItemScores) init() ComprehensiveItemScores {
+	m := *s
+	if m == nil {
+		m = map[string]NilFloat64{}
 		*s = m
 	}
 	return m
@@ -562,7 +598,54 @@ func (s *FeatureParameters) init() FeatureParameters {
 	return m
 }
 
+type KeywordList []string
+
 type Matrix [][]string
+
+// NewNilFloat64 returns new NilFloat64 with value set to v.
+func NewNilFloat64(v float64) NilFloat64 {
+	return NilFloat64{
+		Value: v,
+	}
+}
+
+// NilFloat64 is nullable float64.
+type NilFloat64 struct {
+	Value float64
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFloat64) SetTo(v float64) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFloat64) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFloat64) SetToNull() {
+	o.Null = true
+	var v float64
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFloat64) Get() (v float64, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFloat64) Or(d float64) float64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
 
 // NewOptBool returns new OptBool with value set to v.
 func NewOptBool(v bool) OptBool {
@@ -1366,6 +1449,84 @@ func (o OptUser) Or(d User) User {
 type Price decimal.Decimal
 
 type Rating float64
+
+type ReplaceFlagsOK struct {
+	Stored OptInt `json:"stored"`
+}
+
+// GetStored returns the value of Stored.
+func (s *ReplaceFlagsOK) GetStored() OptInt {
+	return s.Stored
+}
+
+// SetStored sets the value of Stored.
+func (s *ReplaceFlagsOK) SetStored(val OptInt) {
+	s.Stored = val
+}
+
+// ReplaceFlagsReq represents sum type.
+type ReplaceFlagsReq struct {
+	Type         ReplaceFlagsReqType // switch on this field
+	FeatureArray []Feature
+	String       string
+}
+
+// ReplaceFlagsReqType is oneOf type of ReplaceFlagsReq.
+type ReplaceFlagsReqType string
+
+// Possible values for ReplaceFlagsReqType.
+const (
+	FeatureArrayReplaceFlagsReq ReplaceFlagsReqType = "[]Feature"
+	StringReplaceFlagsReq       ReplaceFlagsReqType = "string"
+)
+
+// IsFeatureArray reports whether ReplaceFlagsReq is []Feature.
+func (s ReplaceFlagsReq) IsFeatureArray() bool { return s.Type == FeatureArrayReplaceFlagsReq }
+
+// IsString reports whether ReplaceFlagsReq is string.
+func (s ReplaceFlagsReq) IsString() bool { return s.Type == StringReplaceFlagsReq }
+
+// SetFeatureArray sets ReplaceFlagsReq to []Feature.
+func (s *ReplaceFlagsReq) SetFeatureArray(v []Feature) {
+	s.Type = FeatureArrayReplaceFlagsReq
+	s.FeatureArray = v
+}
+
+// GetFeatureArray returns []Feature and true boolean if ReplaceFlagsReq is []Feature.
+func (s ReplaceFlagsReq) GetFeatureArray() (v []Feature, ok bool) {
+	if !s.IsFeatureArray() {
+		return v, false
+	}
+	return s.FeatureArray, true
+}
+
+// NewFeatureArrayReplaceFlagsReq returns new ReplaceFlagsReq from []Feature.
+func NewFeatureArrayReplaceFlagsReq(v []Feature) ReplaceFlagsReq {
+	var s ReplaceFlagsReq
+	s.SetFeatureArray(v)
+	return s
+}
+
+// SetString sets ReplaceFlagsReq to string.
+func (s *ReplaceFlagsReq) SetString(v string) {
+	s.Type = StringReplaceFlagsReq
+	s.String = v
+}
+
+// GetString returns string and true boolean if ReplaceFlagsReq is string.
+func (s ReplaceFlagsReq) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringReplaceFlagsReq returns new ReplaceFlagsReq from string.
+func NewStringReplaceFlagsReq(v string) ReplaceFlagsReq {
+	var s ReplaceFlagsReq
+	s.SetString(v)
+	return s
+}
 
 // User information.
 // Ref: #/components/schemas/User

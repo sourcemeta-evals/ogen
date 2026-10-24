@@ -57,6 +57,15 @@ func TestEqualRawJSON(t *testing.T) {
 	}
 }
 
+func TestEqualRawJSONTrailingInput(t *testing.T) {
+	// A payload with data after the first value is not a single JSON value,
+	// so it compares bytewise instead of by its leading value
+	require.False(t, EqualRawJSON(jx.Raw(`1 2`), jx.Raw(`1 3`)))
+	require.False(t, EqualRawJSON(jx.Raw(`1 2`), jx.Raw(`1`)))
+	require.False(t, EqualRawJSON(jx.Raw(`1`), jx.Raw(`1 2`)))
+	require.True(t, EqualRawJSON(jx.Raw(`1 2`), jx.Raw(`1 2`)))
+}
+
 func TestUniqueItemsRawJSON(t *testing.T) {
 	duplicate := []jx.Raw{
 		jx.Raw(`{"a":1,"b":2}`),
@@ -315,6 +324,20 @@ func TestEqualDeep(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, utc.Equal(shifted))
 		require.False(t, EqualDeep(utc, shifted))
+	})
+	t.Run("DefinedTimeTypesCompareByInstantAndOffset", func(t *testing.T) {
+		type stamp time.Time
+		// Equal instants with equal offsets must compare equal even when
+		// their locations are represented differently, which the private
+		// location fields would otherwise distinguish
+		utc, err := time.Parse(time.RFC3339, "2024-01-02T03:04:05Z")
+		require.NoError(t, err)
+		fixed := utc.In(time.FixedZone("UTC+0", 0))
+		require.True(t, EqualDeep(stamp(utc), stamp(fixed)))
+
+		sameInstantOtherOffset := utc.In(time.FixedZone("UTC+1", 3600))
+		require.False(t, EqualDeep(stamp(utc), stamp(sameInstantOtherOffset)))
+		require.False(t, EqualDeep(stamp(utc), stamp(utc.Add(time.Millisecond))))
 	})
 	t.Run("DefinedDecimalTypesCompareNumerically", func(t *testing.T) {
 		type money decimal.Decimal

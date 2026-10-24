@@ -103,6 +103,12 @@ type FieldEqualitySpec struct {
 	// map[...] syntax in their Go representation
 	IsMapOfFloats bool
 
+	// IsMapOfFloatWrappers indicates a map field whose values are nullable
+	// wrappers around floating point numbers: == equates their signed
+	// zeros, but formatting does not, so the payloads must not feed the
+	// hash
+	IsMapOfFloatWrappers bool
+
 	// IsMapOfRaw indicates a map field whose values are raw JSON values
 	// (jx.Raw) compared semantically value by value
 	IsMapOfRaw bool
@@ -205,6 +211,11 @@ type FieldHashSpec struct {
 
 	// IsMapOfFloats indicates map values are floating point numbers
 	IsMapOfFloats bool
+
+	// IsMapOfFloatWrappers indicates map values are nullable wrappers
+	// around floating point numbers, excluded from the hash because ==
+	// equates signed zeros that formatting distinguishes
+	IsMapOfFloatWrappers bool
 
 	// IsMapOfRaw indicates map values are raw JSON values
 	IsMapOfRaw bool

@@ -90,6 +90,16 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Keywords != nil {
+			e.FieldStart("keywords")
+			s.Keywords.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("scores")
+		s.Scores.Encode(e)
+	}
+	{
 		e.FieldStart("rows")
 		s.Rows.Encode(e)
 	}
@@ -167,7 +177,7 @@ func (s *ComprehensiveItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfComprehensiveItem = [24]string{
+var jsonFieldsNameOfComprehensiveItem = [26]string{
 	0:  "id",
 	1:  "name",
 	2:  "priority",
@@ -181,17 +191,19 @@ var jsonFieldsNameOfComprehensiveItem = [24]string{
 	10: "rating",
 	11: "ratings",
 	12: "price",
-	13: "rows",
-	14: "status",
-	15: "category",
-	16: "tags",
-	17: "labels",
-	18: "metadata",
-	19: "customFields",
-	20: "owner",
-	21: "assignee",
-	22: "watchers",
-	23: "configuration",
+	13: "keywords",
+	14: "scores",
+	15: "rows",
+	16: "status",
+	17: "category",
+	18: "tags",
+	19: "labels",
+	20: "metadata",
+	21: "customFields",
+	22: "owner",
+	23: "assignee",
+	24: "watchers",
+	25: "configuration",
 }
 
 // Decode decodes ComprehensiveItem from json.
@@ -199,7 +211,7 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ComprehensiveItem to nil")
 	}
-	var requiredBitSet [3]uint8
+	var requiredBitSet [4]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -342,8 +354,27 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"price\"")
 			}
+		case "keywords":
+			if err := func() error {
+				if err := s.Keywords.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"keywords\"")
+			}
+		case "scores":
+			requiredBitSet[1] |= 1 << 6
+			if err := func() error {
+				if err := s.Scores.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"scores\"")
+			}
 		case "rows":
-			requiredBitSet[1] |= 1 << 5
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				if err := s.Rows.Decode(d); err != nil {
 					return err
@@ -486,9 +517,10 @@ func (s *ComprehensiveItem) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
+	for i, mask := range [4]uint8{
 		0b00001111,
-		0b00101000,
+		0b11001000,
+		0b00000000,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -739,6 +771,60 @@ func (s ComprehensiveItemRatings) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ComprehensiveItemRatings) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s ComprehensiveItemScores) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s ComprehensiveItemScores) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		elem.Encode(e)
+	}
+}
+
+// Decode decodes ComprehensiveItemScores from json.
+func (s *ComprehensiveItemScores) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ComprehensiveItemScores to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem NilFloat64
+		if err := func() error {
+			if err := elem.Decode(d); err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ComprehensiveItemScores")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ComprehensiveItemScores) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ComprehensiveItemScores) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -1271,6 +1357,63 @@ func (s *FeatureParameters) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes KeywordList as json.
+func (s KeywordList) Encode(e *jx.Encoder) {
+	unwrapped := []string(s)
+	if unwrapped == nil {
+		e.ArrEmpty()
+		return
+	}
+	if unwrapped != nil {
+		e.ArrStart()
+		for _, elem := range unwrapped {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+}
+
+// Decode decodes KeywordList from json.
+func (s *KeywordList) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode KeywordList to nil")
+	}
+	var unwrapped []string
+	if err := func() error {
+		unwrapped = make([]string, 0)
+		if err := d.Arr(func(d *jx.Decoder) error {
+			var elem string
+			v, err := d.Str()
+			elem = string(v)
+			if err != nil {
+				return err
+			}
+			unwrapped = append(unwrapped, elem)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = KeywordList(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s KeywordList) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *KeywordList) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes Matrix as json.
 func (s Matrix) Encode(e *jx.Encoder) {
 	unwrapped := [][]string(s)
@@ -1331,6 +1474,52 @@ func (s Matrix) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *Matrix) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes float64 as json.
+func (o NilFloat64) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Float64(float64(o.Value))
+}
+
+// Decode decodes float64 from json.
+func (o *NilFloat64) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilFloat64 to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v float64
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	v, err := d.Float64()
+	if err != nil {
+		return err
+	}
+	o.Value = float64(v)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilFloat64) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilFloat64) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -2006,6 +2195,129 @@ func (s Rating) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *Rating) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ReplaceFlagsOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ReplaceFlagsOK) encodeFields(e *jx.Encoder) {
+	{
+		if s.Stored.Set {
+			e.FieldStart("stored")
+			s.Stored.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfReplaceFlagsOK = [1]string{
+	0: "stored",
+}
+
+// Decode decodes ReplaceFlagsOK from json.
+func (s *ReplaceFlagsOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReplaceFlagsOK to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "stored":
+			if err := func() error {
+				s.Stored.Reset()
+				if err := s.Stored.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stored\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ReplaceFlagsOK")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReplaceFlagsOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReplaceFlagsOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ReplaceFlagsReq as json.
+func (s ReplaceFlagsReq) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case FeatureArrayReplaceFlagsReq:
+		e.ArrStart()
+		for _, elem := range s.FeatureArray {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	case StringReplaceFlagsReq:
+		e.Str(s.String)
+	}
+}
+
+// Decode decodes ReplaceFlagsReq from json.
+func (s *ReplaceFlagsReq) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReplaceFlagsReq to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Array:
+		s.FeatureArray = make([]Feature, 0)
+		if err := d.Arr(func(d *jx.Decoder) error {
+			var elem Feature
+			if err := elem.Decode(d); err != nil {
+				return err
+			}
+			s.FeatureArray = append(s.FeatureArray, elem)
+			return nil
+		}); err != nil {
+			return err
+		}
+		s.Type = FeatureArrayReplaceFlagsReq
+	case jx.String:
+		v, err := d.Str()
+		s.String = string(v)
+		if err != nil {
+			return err
+		}
+		s.Type = StringReplaceFlagsReq
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ReplaceFlagsReq) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReplaceFlagsReq) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

@@ -114,6 +114,27 @@ func (a ComprehensiveItem) Equal(b ComprehensiveItem, depth int) bool {
 			return false
 		}
 	}
+	// Compare array field: Keywords
+	if (a.Keywords == nil) != (b.Keywords == nil) {
+		return false
+	}
+	if len(a.Keywords) != len(b.Keywords) {
+		return false
+	}
+	for i := range a.Keywords {
+		if a.Keywords[i] != b.Keywords[i] {
+			return false
+		}
+	}
+	// Compare map field: Scores
+	if len(a.Scores) != len(b.Scores) {
+		return false
+	}
+	for k, v := range a.Scores {
+		if bv, ok := b.Scores[k]; !ok || v != bv {
+			return false
+		}
+	}
 	// Compare array field: Rows
 	if !validate.EqualDeep(a.Rows, b.Rows) {
 		return false

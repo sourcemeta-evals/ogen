@@ -104,6 +104,16 @@ func equalDeepValue(a, b reflect.Value, depth int) bool {
 	if t == timeReflectType {
 		return EqualTime(a.Interface().(time.Time), b.Interface().(time.Time))
 	}
+	if t.Kind() == reflect.Struct && t.ConvertibleTo(timeReflectType) {
+		// Defined types over time.Time, such as a referenced date-time
+		// schema, compare like time.Time itself: by instant and UTC offset.
+		// Without this case reflection would compare the private location
+		// fields, so equal instants with differently represented locations
+		// would not deduplicate
+		left := a.Convert(timeReflectType).Interface().(time.Time)
+		right := b.Convert(timeReflectType).Interface().(time.Time)
+		return EqualTime(left, right)
+	}
 	if t.Kind() == reflect.Struct && t.ConvertibleTo(decimalReflectType) {
 		// decimal.Decimal and defined types over it, such as a referenced
 		// decimal schema, compare by numeric value. Defined types have no
@@ -239,7 +249,21 @@ func rawJSONEqual(a, b jx.Raw) (bool, error) {
 	}()
 	left.ResetBytes(a)
 	right.ResetBytes(b)
-	return equalJSONValue(left, right)
+	equal, err := equalJSONValue(left, right)
+	if err != nil || !equal {
+		// An unequal verdict can leave the decoders mid-value, so trailing
+		// input is only meaningful after a full equal comparison
+		return false, err
+	}
+	// A payload with data after the first value is not a single JSON value,
+	// so it falls back to byte comparison like other malformed input
+	if left.Next() != jx.Invalid {
+		return false, errors.New("trailing data after left value")
+	}
+	if right.Next() != jx.Invalid {
+		return false, errors.New("trailing data after right value")
+	}
+	return true, nil
 }
 
 func equalJSONValue(left, right *jx.Decoder) (bool, error) {

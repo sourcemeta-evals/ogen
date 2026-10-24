@@ -7,4 +7,5 @@ type OperationName = string
 
 const (
 	CreateIntegrationItemsOperation OperationName = "CreateIntegrationItems"
+	ReplaceFlagsOperation           OperationName = "ReplaceFlags"
 )

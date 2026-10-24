@@ -48,24 +48,58 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/integration/test"
+		case '/': // Prefix: "/integration/"
 
-			if l := len("/integration/test"); len(elem) >= l && elem[0:l] == "/integration/test" {
+			if l := len("/integration/"); len(elem) >= l && elem[0:l] == "/integration/" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
 			if len(elem) == 0 {
-				// Leaf node.
-				switch r.Method {
-				case "POST":
-					s.handleCreateIntegrationItemsRequest([0]string{}, elemIsEscaped, w, r)
-				default:
-					s.notAllowed(w, r, "POST")
+				break
+			}
+			switch elem[0] {
+			case 'f': // Prefix: "flags"
+
+				if l := len("flags"); len(elem) >= l && elem[0:l] == "flags" {
+					elem = elem[l:]
+				} else {
+					break
 				}
 
-				return
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "POST":
+						s.handleReplaceFlagsRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, "POST")
+					}
+
+					return
+				}
+
+			case 't': // Prefix: "test"
+
+				if l := len("test"); len(elem) >= l && elem[0:l] == "test" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "POST":
+						s.handleCreateIntegrationItemsRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, "POST")
+					}
+
+					return
+				}
+
 			}
 
 		}
@@ -154,29 +188,68 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/integration/test"
+		case '/': // Prefix: "/integration/"
 
-			if l := len("/integration/test"); len(elem) >= l && elem[0:l] == "/integration/test" {
+			if l := len("/integration/"); len(elem) >= l && elem[0:l] == "/integration/" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
 			if len(elem) == 0 {
-				// Leaf node.
-				switch method {
-				case "POST":
-					r.name = CreateIntegrationItemsOperation
-					r.summary = "Create items with all field types"
-					r.operationID = "createIntegrationItems"
-					r.operationGroup = ""
-					r.pathPattern = "/integration/test"
-					r.args = args
-					r.count = 0
-					return r, true
-				default:
-					return
+				break
+			}
+			switch elem[0] {
+			case 'f': // Prefix: "flags"
+
+				if l := len("flags"); len(elem) >= l && elem[0:l] == "flags" {
+					elem = elem[l:]
+				} else {
+					break
 				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "POST":
+						r.name = ReplaceFlagsOperation
+						r.summary = "Replace flags, given as a unique list or a single token"
+						r.operationID = "replaceFlags"
+						r.operationGroup = ""
+						r.pathPattern = "/integration/flags"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
+				}
+
+			case 't': // Prefix: "test"
+
+				if l := len("test"); len(elem) >= l && elem[0:l] == "test" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "POST":
+						r.name = CreateIntegrationItemsOperation
+						r.summary = "Create items with all field types"
+						r.operationID = "createIntegrationItems"
+						r.operationGroup = ""
+						r.pathPattern = "/integration/test"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
+				}
+
 			}
 
 		}

@@ -21,3 +21,12 @@ var _ Handler = UnimplementedHandler{}
 func (UnimplementedHandler) CreateIntegrationItems(ctx context.Context, req *CreateIntegrationItemsReq) (r *CreateIntegrationItemsOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
+
+// ReplaceFlags implements replaceFlags operation.
+//
+// Replace flags, given as a unique list or a single token.
+//
+// POST /integration/flags
+func (UnimplementedHandler) ReplaceFlags(ctx context.Context, req ReplaceFlagsReq) (r *ReplaceFlagsOK, _ error) {
+	return r, ht.ErrNotImplemented
+}

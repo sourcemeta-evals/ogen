@@ -14,6 +14,12 @@ type Handler interface {
 	//
 	// POST /integration/test
 	CreateIntegrationItems(ctx context.Context, req *CreateIntegrationItemsReq) (*CreateIntegrationItemsOK, error)
+	// ReplaceFlags implements replaceFlags operation.
+	//
+	// Replace flags, given as a unique list or a single token.
+	//
+	// POST /integration/flags
+	ReplaceFlags(ctx context.Context, req ReplaceFlagsReq) (*ReplaceFlagsOK, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

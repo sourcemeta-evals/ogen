@@ -43,6 +43,33 @@ paths:
                   created:
                     type: integer
 
+  /integration/flags:
+    post:
+      operationId: replaceFlags
+      summary: Replace flags, given as a unique list or a single token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              uniqueItems: true
+              anyOf:
+                - type: array
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/Feature'
+                - type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: integer
+
 components:
   schemas:
     ComprehensiveItem:
@@ -54,6 +81,7 @@ components:
         - priority
         - active
         - ratings
+        - scores
         - rows
       properties:
         # Primitive fields (required)
@@ -96,8 +124,8 @@ components:
           format: byte
           description: Optional binary payload
 
-        # String-declared decimal, where the decoded scale is part of the
-        # value: "1.0" and "1.00" are different strings
+        # String-encoded decimal: the decoded value compares numerically,
+        # so equal values written with different scales deduplicate
         amount:
           type: string
           format: decimal
@@ -120,6 +148,20 @@ components:
         price:
           $ref: '#/components/schemas/Price'
           description: Optional referenced price
+
+        # Optional field referencing a named string array, where nil
+        # encodes absence
+        keywords:
+          $ref: '#/components/schemas/KeywordList'
+          description: Optional referenced keyword list
+
+        # Required map of nullable numbers
+        scores:
+          type: object
+          additionalProperties:
+            type: number
+            nullable: true
+          description: Per-category nullable scores
 
         # Required field referencing a named array of string arrays
         rows:
@@ -191,6 +233,12 @@ components:
     Rating:
       type: number
       description: Rating value referenced as a named scalar
+
+    KeywordList:
+      type: array
+      description: Named list of keywords
+      items:
+        type: string
 
     Price:
       type: string

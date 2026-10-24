@@ -63,6 +63,17 @@ func (s *ComprehensiveItem) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := s.Scores.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "scores",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.Rows.Validate(); err != nil {
 			return err
 		}
@@ -134,6 +145,35 @@ func (s ComprehensiveItemRatings) Validate() error {
 		if err := func() error {
 			if err := elem.Validate(); err != nil {
 				return err
+			}
+			return nil
+		}(); err != nil {
+			failures = append(failures, validate.FieldError{
+				Name:  key,
+				Error: err,
+			})
+		}
+	}
+
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ComprehensiveItemScores) Validate() error {
+	var failures []validate.FieldError
+	for key, elem := range s {
+		if err := func() error {
+			if value, ok := elem.Get(); ok {
+				if err := func() error {
+					if err := (validate.Float{}).Validate(float64(value)); err != nil {
+						return errors.Wrap(err, "float")
+					}
+					return nil
+				}(); err != nil {
+					return err
+				}
 			}
 			return nil
 		}(); err != nil {
@@ -245,4 +285,29 @@ func (s Rating) Validate() error {
 		return errors.Wrap(err, "float")
 	}
 	return nil
+}
+
+func (s ReplaceFlagsReq) Validate() error {
+	switch s.Type {
+	case FeatureArrayReplaceFlagsReq:
+		if s.FeatureArray == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    1,
+			MinLengthSet: true,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.FeatureArray)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validateUniqueFeature(s.FeatureArray); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	case StringReplaceFlagsReq:
+		return nil // no validation needed
+	default:
+		return errors.Errorf("invalid type %q", s.Type)
+	}
 }

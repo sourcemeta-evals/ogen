@@ -297,6 +297,10 @@ func (g *schemaGen) anyOf(name string, schema *jsonschema.Schema, side bool) (*i
 			case ir.KindArray:
 				if !v.Validators.Array.Set() {
 					v.Validators.SetArray(schema)
+				} else if schema.UniqueItems {
+					// The variant's own length validators must not silently
+					// drop the outer uniqueness constraint
+					v.Validators.Array.UniqueItems = true
 				}
 			case ir.KindMap, ir.KindStruct:
 				if !v.Validators.Object.Set() {

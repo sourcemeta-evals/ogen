@@ -110,6 +110,20 @@ func (a ComprehensiveItem) Hash(depth int) uint64 {
 	} else {
 		h.Write([]byte{0})
 	}
+	// Hash array field: Keywords
+	for _, item := range a.Keywords {
+		h.Write([]byte(fmt.Sprintf("%v", item)))
+	}
+	// Hash map field: Scores (sorted keys)
+	keysScores := make([]string, 0, len(a.Scores))
+	for k := range a.Scores {
+		keysScores = append(keysScores, k)
+	}
+	sort.Strings(keysScores)
+	for _, k := range keysScores {
+		h.Write([]byte(k))
+		// Map values excluded from the hash: wrapped floats equate signed zeros
+	}
 	// Array field Rows is excluded from the hash: its elements compare semantically
 	// Hash optional field: Status
 	if a.Status.Set {

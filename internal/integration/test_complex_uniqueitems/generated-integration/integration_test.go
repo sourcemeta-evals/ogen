@@ -369,6 +369,110 @@ func TestValidateUniqueComprehensiveItem_StringDecimalNumericEquality(t *testing
 	}
 }
 
+// Optional referenced string arrays use nil to encode absence, which stays
+// distinct from a present empty array
+func TestValidateUniqueComprehensiveItem_ReferencedKeywordListPresence(t *testing.T) {
+	base := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	absent := base
+	presentEmpty := base
+	presentEmpty.Keywords = KeywordList{}
+
+	err := validateUniqueComprehensiveItem([]ComprehensiveItem{absent, presentEmpty})
+	if err != nil {
+		t.Errorf("Expected absent and present-empty keyword lists to stay distinct, got: %v", err)
+	}
+
+	duplicate := base
+	duplicate.Keywords = KeywordList{"go"}
+	other := base
+	other.Keywords = KeywordList{"go"}
+	err = validateUniqueComprehensiveItem([]ComprehensiveItem{duplicate, other})
+	if err == nil {
+		t.Error("Expected duplicate error for identical keyword lists")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+}
+
+// Required maps of nullable numbers hash only their keys, so records whose
+// wrapped values differ only in zero sign stay in one bucket and
+// deduplicate
+func TestValidateUniqueComprehensiveItem_NegativeZeroNullableScores(t *testing.T) {
+	itemWithPositiveZero := ComprehensiveItem{
+		ID:       "item-1",
+		Name:     "Base Item",
+		Priority: 1,
+		Active:   true,
+		Scores:   ComprehensiveItemScores{"overall": NewNilFloat64(0)},
+		Owner: NewOptUser(User{
+			Username: "owner",
+		}),
+	}
+
+	itemWithNegativeZero := itemWithPositiveZero
+	itemWithNegativeZero.Scores = ComprehensiveItemScores{"overall": NewNilFloat64(math.Copysign(0, -1))}
+
+	err := validateUniqueComprehensiveItem([]ComprehensiveItem{itemWithPositiveZero, itemWithNegativeZero})
+	if err == nil {
+		t.Error("Expected duplicate error for items differing only in a wrapped zero sign")
+	}
+	if _, ok := err.(*validate.DuplicateItemsError); !ok && err != nil {
+		t.Errorf("Expected DuplicateItemsError, got: %T", err)
+	}
+
+	itemWithNull := itemWithPositiveZero
+	nullScore := NilFloat64{Null: true}
+	itemWithNull.Scores = ComprehensiveItemScores{"overall": nullScore}
+	err = validateUniqueComprehensiveItem([]ComprehensiveItem{itemWithPositiveZero, itemWithNull})
+	if err != nil {
+		t.Errorf("Expected null and zero scores to stay distinct, got: %v", err)
+	}
+}
+
+// An anyOf body whose array variant carries its own length validator must
+// still enforce the outer uniqueItems constraint
+func TestReplaceFlagsReq_OuterUniqueItemsPreserved(t *testing.T) {
+	duplicate := ReplaceFlagsReq{
+		Type: FeatureArrayReplaceFlagsReq,
+		FeatureArray: []Feature{
+			{Name: NewOptString("dark-mode")},
+			{Name: NewOptString("dark-mode")},
+		},
+	}
+	if err := duplicate.Validate(); err == nil {
+		t.Error("Expected duplicate error for repeated flags in the array variant")
+	}
+
+	distinct := ReplaceFlagsReq{
+		Type: FeatureArrayReplaceFlagsReq,
+		FeatureArray: []Feature{
+			{Name: NewOptString("dark-mode")},
+			{Name: NewOptString("beta")},
+		},
+	}
+	if err := distinct.Validate(); err != nil {
+		t.Errorf("Expected distinct flags to pass, got: %v", err)
+	}
+
+	empty := ReplaceFlagsReq{
+		Type:         FeatureArrayReplaceFlagsReq,
+		FeatureArray: []Feature{},
+	}
+	if err := empty.Validate(); err == nil {
+		t.Error("Expected the variant's own minItems constraint to stay enforced")
+	}
+}
+
 // Referenced decimal schemas generate defined types over decimal.Decimal,
 // which must still compare by numeric value, so equal values written with
 // different scales are duplicates

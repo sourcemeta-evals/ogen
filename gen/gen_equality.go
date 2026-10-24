@@ -397,27 +397,28 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 	for _, field := range spec.Fields {
 		// Convert FieldEqualitySpec to FieldHashSpec
 		hashField := ir.FieldHashSpec{
-			FieldName:          field.FieldName,
-			FieldType:          field.FieldType,
-			GoType:             field.GoType,
-			IsNested:           field.IsNested,
-			IsArrayOfStructs:   field.IsArrayOfStructs,
-			IsArrayOfNullable:  field.IsArrayOfNullable,
-			IsMapOfStructs:     field.IsMapOfStructs,
-			IsMapOfFloats:      field.IsMapOfFloats,
-			IsMap:              field.IsMap,
-			IsArray:            field.IsArray,
-			IsRawJSON:          field.IsRawJSON,
-			IsURL:              field.IsURL,
-			IsDecimal:          field.IsDecimal,
-			IsFloat:            field.IsFloat,
-			IsFloatArray:       field.IsFloatArray,
-			IsDeepOnly:         field.IsDeepOnly,
-			IsArrayOfRaw:       field.IsArrayOfRaw,
-			IsArrayOfDeep:      field.IsArrayOfDeep,
-			IsMapOfRaw:         field.IsMapOfRaw,
-			IsMapOfDeep:        field.IsMapOfDeep,
-			IsOptionalNullable: field.IsOptionalNullable,
+			FieldName:            field.FieldName,
+			FieldType:            field.FieldType,
+			GoType:               field.GoType,
+			IsNested:             field.IsNested,
+			IsArrayOfStructs:     field.IsArrayOfStructs,
+			IsArrayOfNullable:    field.IsArrayOfNullable,
+			IsMapOfStructs:       field.IsMapOfStructs,
+			IsMapOfFloats:        field.IsMapOfFloats,
+			IsMapOfFloatWrappers: field.IsMapOfFloatWrappers,
+			IsMap:                field.IsMap,
+			IsArray:              field.IsArray,
+			IsRawJSON:            field.IsRawJSON,
+			IsURL:                field.IsURL,
+			IsDecimal:            field.IsDecimal,
+			IsFloat:              field.IsFloat,
+			IsFloatArray:         field.IsFloatArray,
+			IsDeepOnly:           field.IsDeepOnly,
+			IsArrayOfRaw:         field.IsArrayOfRaw,
+			IsArrayOfDeep:        field.IsArrayOfDeep,
+			IsMapOfRaw:           field.IsMapOfRaw,
+			IsMapOfDeep:          field.IsMapOfDeep,
+			IsOptionalNullable:   field.IsOptionalNullable,
 		}
 		g.writeFieldHash(&b, hashField, spec.NeedsDepthTracking)
 	}
@@ -606,6 +607,10 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 		case field.IsMapOfRaw, field.IsMapOfDeep:
 			// Values compare semantically, so only the keys feed the hash
 			fmt.Fprintf(b, "\t\t// Map values excluded from the hash: they compare semantically\n")
+		case field.IsMapOfFloatWrappers:
+			// == equates wrapper payloads whose signed zeros format
+			// differently, so only the keys feed the hash
+			fmt.Fprintf(b, "\t\t// Map values excluded from the hash: wrapped floats equate signed zeros\n")
 		case field.IsMapOfFloats:
 			writeFloatHash(b, "\t\t", "v", fmt.Sprintf("a.%s[k]", field.FieldName))
 		default:

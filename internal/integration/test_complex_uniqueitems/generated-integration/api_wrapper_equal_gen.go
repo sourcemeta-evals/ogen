@@ -11,6 +11,21 @@ import (
 // parameter continues the deep-comparison recursion budget, so cyclic
 // values surface as a depth limit error instead of exhausting the
 // stack by restarting the budget at every wrapper boundary.
+func (s NilFloat64) EqualDepth(v NilFloat64, depth int) bool {
+	if s.Null != v.Null {
+		return false
+	}
+	if s.Null {
+		return true
+	}
+	return validate.EqualDeepDepth(s.Value, v.Value, depth+1)
+}
+
+// EqualDepth reports whether both wrapped values are equal, ignoring
+// the inactive payload under an unset or null wrapper. The depth
+// parameter continues the deep-comparison recursion budget, so cyclic
+// values surface as a depth limit error instead of exhausting the
+// stack by restarting the budget at every wrapper boundary.
 func (s OptBool) EqualDepth(v OptBool, depth int) bool {
 	if s.Set != v.Set {
 		return false

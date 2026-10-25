@@ -32,6 +32,14 @@ var tupleBehaviorTest []byte
 //go:embed union_behavior_test.go.txt
 var unionBehaviorTest []byte
 
+// refUnionBehaviorTest is the committed assertion file for the
+// refunioncheck package, written next to the generated union code only when
+// generation admits a union over a referenced named array carrying an outer
+// uniqueItems constraint.
+//
+//go:embed ref_union_behavior_test.go.txt
+var refUnionBehaviorTest []byte
+
 // runtimeSchema drives the behavior test in the runtimecheck package. The
 // fixed root type name and named Entry definition make every generated
 // identifier deterministic, so the committed behavior test compiles against
@@ -131,6 +139,73 @@ const oneOfUnionSchema = `{
   }
 }`
 
+// refAnyOfUnionSchema and refOneOfUnionSchema carry an outer uniqueItems
+// constraint on a union whose array variant is a reference to a named array
+// schema also used, without the constraint, by the sibling plain property.
+// The named array becomes a shared alias type, so attaching the outer
+// constraint to it directly would leak into the unconstrained use. A
+// solution may reject these unions as unsupported, but admitting them must
+// enforce the constraint on the union without affecting the plain use.
+const refAnyOfUnionSchema = `{
+  "type": "object",
+  "required": [ "id", "flags" ],
+  "properties": {
+    "id": { "type": "string" },
+    "flags": {
+      "uniqueItems": true,
+      "anyOf": [
+        { "$ref": "#/$defs/FlagList" },
+        { "type": "string" }
+      ]
+    },
+    "plain": { "$ref": "#/$defs/FlagList" }
+  },
+  "$defs": {
+    "FlagList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [ "name", "value" ],
+        "properties": {
+          "name": { "type": "string" },
+          "value": { "type": "string" }
+        }
+      }
+    }
+  }
+}`
+
+const refOneOfUnionSchema = `{
+  "type": "object",
+  "required": [ "id", "flags" ],
+  "properties": {
+    "id": { "type": "string" },
+    "flags": {
+      "uniqueItems": true,
+      "oneOf": [
+        { "$ref": "#/$defs/FlagList" },
+        { "type": "string" }
+      ]
+    },
+    "plain": { "$ref": "#/$defs/FlagList" }
+  },
+  "$defs": {
+    "FlagList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [ "name", "value" ],
+        "properties": {
+          "name": { "type": "string" },
+          "value": { "type": "string" }
+        }
+      }
+    }
+  }
+}`
+
 // allOfTupleSchema merges two unique string tuples under an outer
 // uniqueItems constraint. Schema merging must not discard the tuple items
 // or the uniqueness constraint on the way to the tuple admission policy:
@@ -195,6 +270,14 @@ func TestUniqueItemsGeneratedValidationBehavior(t *testing.T) {
 	t.Run("AllOfTupleConstraintNotLost", func(t *testing.T) {
 		runConstraintGate(t, allOfTupleSchema, "alloftuplecheck", "tuplecheck",
 			"TupleRoot", "tuple_root.gen.go", tupleBehaviorTest, "tuple_behavior_test.go")
+	})
+	t.Run("ReferencedAnyOfUnionConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, refAnyOfUnionSchema, "refanyofcheck", "refunioncheck",
+			"UnionRoot", "union_root.gen.go", refUnionBehaviorTest, "ref_union_behavior_test.go")
+	})
+	t.Run("ReferencedOneOfUnionConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, refOneOfUnionSchema, "refoneofcheck", "refunioncheck",
+			"UnionRoot", "union_root.gen.go", refUnionBehaviorTest, "ref_union_behavior_test.go")
 	})
 }
 

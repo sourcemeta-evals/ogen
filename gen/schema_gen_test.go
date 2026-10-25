@@ -338,7 +338,7 @@ func TestSchemaGenAllOfTupleUniqueItemsRejected(t *testing.T) {
 	a.Equal("tuple uniqueItems", notImplemented.Name)
 }
 
-func TestSchemaGenSumOuterUniqueItemsPropagated(t *testing.T) {
+func TestSchemaGenSumOuterUniqueItems(t *testing.T) {
 	arrayVariant := func() *jsonschema.Schema {
 		return &jsonschema.Schema{
 			Type:     jsonschema.Array,
@@ -354,6 +354,45 @@ func TestSchemaGenSumOuterUniqueItemsPropagated(t *testing.T) {
 	}
 	stringVariant := func() *jsonschema.Schema {
 		return &jsonschema.Schema{Type: jsonschema.String}
+	}
+
+	// A referenced array variant becomes an alias of a shared named type, so
+	// the outer uniqueness constraint cannot be attached to it without
+	// leaking into unrelated uses: the union must stay rejected instead
+	referencedArrayVariant := func(name string) *jsonschema.Schema {
+		variant := arrayVariant()
+		variant.Ref = jsonschema.Ref{Ptr: "#/$defs/" + name}
+		return variant
+	}
+	for _, tt := range []struct {
+		name   string
+		schema *jsonschema.Schema
+	}{
+		{
+			name: "anyOfReferencedArray",
+			schema: &jsonschema.Schema{
+				AnyOf:       []*jsonschema.Schema{referencedArrayVariant("AnyFlags"), stringVariant()},
+				UniqueItems: true,
+			},
+		},
+		{
+			name: "oneOfReferencedArray",
+			schema: &jsonschema.Schema{
+				OneOf:       []*jsonschema.Schema{referencedArrayVariant("OneFlags"), stringVariant()},
+				UniqueItems: true,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			a := require.New(t)
+			s := newSchemaGen(func(ref jsonschema.Ref) (*ir.Type, bool) {
+				return nil, false
+			})
+			_, err := s.generate("Flags", tt.schema, false)
+			var notImplemented *ErrNotImplemented
+			a.ErrorAs(err, &notImplemented)
+			a.Equal("complex uniqueItems", notImplemented.Name)
+		})
 	}
 
 	for _, tt := range []struct {

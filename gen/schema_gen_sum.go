@@ -268,6 +268,12 @@ func (g *schemaGen) anyOf(name string, schema *jsonschema.Schema, side bool) (*i
 		sum.SumSpec.TypeDiscriminator = true
 
 		for _, v := range sum.SumOf {
+			if schema.UniqueItems && v.Kind != ir.KindArray && v.JSON().Type() == "Array" {
+				// The outer uniqueness constraint cannot be attached to an
+				// aliased array variant without leaking it into unrelated
+				// uses of the shared named type, so keep the shape rejected
+				return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
+			}
 			switch v.Kind {
 			case ir.KindPrimitive, ir.KindEnum:
 				switch {
@@ -430,6 +436,13 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 		if schema.UniqueItems {
 			for _, v := range sum.SumOf {
 				if v.Kind != ir.KindArray {
+					if v.JSON().Type() == "Array" {
+						// The outer uniqueness constraint cannot be attached
+						// to an aliased array variant without leaking it into
+						// unrelated uses of the shared named type, so keep
+						// the shape rejected
+						return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
+					}
 					continue
 				}
 				if !v.Validators.Array.Set() {

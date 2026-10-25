@@ -80,24 +80,58 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-			case 't': // Prefix: "test"
+			case 't': // Prefix: "t"
 
-				if l := len("test"); len(elem) >= l && elem[0:l] == "test" {
+				if l := len("t"); len(elem) >= l && elem[0:l] == "t" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch r.Method {
-					case "POST":
-						s.handleCreateIntegrationItemsRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, "POST")
+					break
+				}
+				switch elem[0] {
+				case 'e': // Prefix: "est"
+
+					if l := len("est"); len(elem) >= l && elem[0:l] == "est" {
+						elem = elem[l:]
+					} else {
+						break
 					}
 
-					return
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleCreateIntegrationItemsRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+
+				case 'o': // Prefix: "oggles"
+
+					if l := len("oggles"); len(elem) >= l && elem[0:l] == "oggles" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleReplaceTogglesRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+
 				}
 
 			}
@@ -225,29 +259,68 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					}
 				}
 
-			case 't': // Prefix: "test"
+			case 't': // Prefix: "t"
 
-				if l := len("test"); len(elem) >= l && elem[0:l] == "test" {
+				if l := len("t"); len(elem) >= l && elem[0:l] == "t" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch method {
-					case "POST":
-						r.name = CreateIntegrationItemsOperation
-						r.summary = "Create items with all field types"
-						r.operationID = "createIntegrationItems"
-						r.operationGroup = ""
-						r.pathPattern = "/integration/test"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
+					break
+				}
+				switch elem[0] {
+				case 'e': // Prefix: "est"
+
+					if l := len("est"); len(elem) >= l && elem[0:l] == "est" {
+						elem = elem[l:]
+					} else {
+						break
 					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = CreateIntegrationItemsOperation
+							r.summary = "Create items with all field types"
+							r.operationID = "createIntegrationItems"
+							r.operationGroup = ""
+							r.pathPattern = "/integration/test"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 'o': // Prefix: "oggles"
+
+					if l := len("oggles"); len(elem) >= l && elem[0:l] == "oggles" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = ReplaceTogglesOperation
+							r.summary = "Replace toggles, given as an exclusive unique list or a single token"
+							r.operationID = "replaceToggles"
+							r.operationGroup = ""
+							r.pathPattern = "/integration/toggles"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
 				}
 
 			}

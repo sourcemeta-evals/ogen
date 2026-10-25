@@ -1,0 +1,49 @@
+// Package unioncheck asserts that an outer uniqueItems constraint on an
+// admitted union keeps being enforced on its array variant. The sibling
+// generated code is produced at grading time from a union schema in the
+// parent package's driver test, and only when generation accepts that
+// schema instead of rejecting it.
+package unioncheck
+
+import (
+	"testing"
+
+	"github.com/go-faster/jx"
+	"github.com/stretchr/testify/require"
+)
+
+// validateValue runs the generated Validate method when the type has one.
+// Solutions that enforce uniqueness while decoding need no Validate method,
+// so its absence is not a failure by itself.
+func validateValue(root *UnionRoot) error {
+	if validator, ok := any(root).(interface{ Validate() error }); ok {
+		return validator.Validate()
+	}
+	return nil
+}
+
+func decodeAndValidate(input string) error {
+	var root UnionRoot
+	if err := root.Decode(jx.DecodeStr(input)); err != nil {
+		return err
+	}
+	return validateValue(&root)
+}
+
+// TestUnionOuterUniqueItemsEnforced runs only when generation admits the
+// union schema: the outer uniqueItems constraint must reject repeated
+// elements of the array variant during decoding or through the public
+// Validate method, must accept distinct elements and the string variant,
+// and must keep the array variant's own minItems constraint enforced.
+func TestUnionOuterUniqueItemsEnforced(t *testing.T) {
+	require.Error(t,
+		decodeAndValidate(`{"id":"a","flags":[{"name":"x","value":"y"},{"name":"x","value":"y"}]}`),
+		"duplicate array variant elements must fail during decoding or validation")
+	require.NoError(t,
+		decodeAndValidate(`{"id":"a","flags":[{"name":"x","value":"y"},{"name":"x","value":"z"}]}`))
+	require.NoError(t,
+		decodeAndValidate(`{"id":"a","flags":"token"}`))
+	require.Error(t,
+		decodeAndValidate(`{"id":"a","flags":[]}`),
+		"the array variant's own minItems constraint must stay enforced")
+}

@@ -2323,6 +2323,129 @@ func (s *ReplaceFlagsReq) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *ReplaceTogglesOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ReplaceTogglesOK) encodeFields(e *jx.Encoder) {
+	{
+		if s.Stored.Set {
+			e.FieldStart("stored")
+			s.Stored.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfReplaceTogglesOK = [1]string{
+	0: "stored",
+}
+
+// Decode decodes ReplaceTogglesOK from json.
+func (s *ReplaceTogglesOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReplaceTogglesOK to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "stored":
+			if err := func() error {
+				s.Stored.Reset()
+				if err := s.Stored.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stored\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ReplaceTogglesOK")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReplaceTogglesOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReplaceTogglesOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ReplaceTogglesReq as json.
+func (s ReplaceTogglesReq) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case FeatureArrayReplaceTogglesReq:
+		e.ArrStart()
+		for _, elem := range s.FeatureArray {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	case StringReplaceTogglesReq:
+		e.Str(s.String)
+	}
+}
+
+// Decode decodes ReplaceTogglesReq from json.
+func (s *ReplaceTogglesReq) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReplaceTogglesReq to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Array:
+		s.FeatureArray = make([]Feature, 0)
+		if err := d.Arr(func(d *jx.Decoder) error {
+			var elem Feature
+			if err := elem.Decode(d); err != nil {
+				return err
+			}
+			s.FeatureArray = append(s.FeatureArray, elem)
+			return nil
+		}); err != nil {
+			return err
+		}
+		s.Type = FeatureArrayReplaceTogglesReq
+	case jx.String:
+		v, err := d.Str()
+		s.String = string(v)
+		if err != nil {
+			return err
+		}
+		s.Type = StringReplaceTogglesReq
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ReplaceTogglesReq) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReplaceTogglesReq) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *User) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)

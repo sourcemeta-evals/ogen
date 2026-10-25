@@ -426,6 +426,22 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 	// 3rd case: distinguish by serialization type.
 	if canUseTypeDiscriminator(sum.SumOf, true) {
 		sum.SumSpec.TypeDiscriminator = true
+
+		if schema.UniqueItems {
+			for _, v := range sum.SumOf {
+				if v.Kind != ir.KindArray {
+					continue
+				}
+				if !v.Validators.Array.Set() {
+					v.Validators.SetArray(schema)
+				} else {
+					// The variant's own length validators must not silently
+					// drop the outer uniqueness constraint
+					v.Validators.Array.UniqueItems = true
+				}
+			}
+		}
+
 		return sum, nil
 	}
 
@@ -572,8 +588,10 @@ func (g *schemaGen) allOf(name string, schema *jsonschema.Schema) (*ir.Type, err
 		return nil, err
 	}
 
-	// If there is only one schema in allOf, avoid merging to keep the reference.
-	if len(schema.AllOf) == 1 {
+	// If there is only one schema in allOf, avoid merging to keep the
+	// reference. An outer uniqueItems sibling still goes through merging so
+	// the constraint reaches the merged schema instead of being dropped
+	if len(schema.AllOf) == 1 && !schema.UniqueItems {
 		s := schema.AllOf[0]
 		if s != nil {
 			return g.generate(name, s, false)
@@ -587,6 +605,9 @@ func (g *schemaGen) allOf(name string, schema *jsonschema.Schema) (*ir.Type, err
 
 	// The reference field must not change
 	mergedSchema.Ref = schema.Ref
+	if schema.UniqueItems {
+		mergedSchema.UniqueItems = true
+	}
 
 	return g.generate(name, mergedSchema, false)
 }
@@ -898,6 +919,7 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 					return nil, errors.Wrapf(err, "merge items[%d]", i)
 				}
 			}
+			r.Items = result
 		case len(s1.Items) == 0 && len(s2.Items) == 0:
 			r.Item, err = mergeSchemes(s1.Item, s2.Item)
 			if err != nil {
@@ -906,10 +928,12 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 
 			r.MinItems = someU64(s1.MinItems, s2.MinItems, selectMaxU64)
 			r.MaxItems = someU64(s1.MaxItems, s2.MaxItems, selectMinU64)
-			r.UniqueItems = s1.UniqueItems || s2.UniqueItems
 		default:
 			return nil, errors.New("can't merge different types of items")
 		}
+		// Uniqueness applies to tuple-form and homogeneous arrays alike:
+		// dropping it here would silently admit duplicate elements
+		r.UniqueItems = s1.UniqueItems || s2.UniqueItems
 	}
 
 	// Object validation

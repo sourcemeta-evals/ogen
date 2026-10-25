@@ -1528,6 +1528,84 @@ func NewStringReplaceFlagsReq(v string) ReplaceFlagsReq {
 	return s
 }
 
+type ReplaceTogglesOK struct {
+	Stored OptInt `json:"stored"`
+}
+
+// GetStored returns the value of Stored.
+func (s *ReplaceTogglesOK) GetStored() OptInt {
+	return s.Stored
+}
+
+// SetStored sets the value of Stored.
+func (s *ReplaceTogglesOK) SetStored(val OptInt) {
+	s.Stored = val
+}
+
+// ReplaceTogglesReq represents sum type.
+type ReplaceTogglesReq struct {
+	Type         ReplaceTogglesReqType // switch on this field
+	FeatureArray []Feature
+	String       string
+}
+
+// ReplaceTogglesReqType is oneOf type of ReplaceTogglesReq.
+type ReplaceTogglesReqType string
+
+// Possible values for ReplaceTogglesReqType.
+const (
+	FeatureArrayReplaceTogglesReq ReplaceTogglesReqType = "[]Feature"
+	StringReplaceTogglesReq       ReplaceTogglesReqType = "string"
+)
+
+// IsFeatureArray reports whether ReplaceTogglesReq is []Feature.
+func (s ReplaceTogglesReq) IsFeatureArray() bool { return s.Type == FeatureArrayReplaceTogglesReq }
+
+// IsString reports whether ReplaceTogglesReq is string.
+func (s ReplaceTogglesReq) IsString() bool { return s.Type == StringReplaceTogglesReq }
+
+// SetFeatureArray sets ReplaceTogglesReq to []Feature.
+func (s *ReplaceTogglesReq) SetFeatureArray(v []Feature) {
+	s.Type = FeatureArrayReplaceTogglesReq
+	s.FeatureArray = v
+}
+
+// GetFeatureArray returns []Feature and true boolean if ReplaceTogglesReq is []Feature.
+func (s ReplaceTogglesReq) GetFeatureArray() (v []Feature, ok bool) {
+	if !s.IsFeatureArray() {
+		return v, false
+	}
+	return s.FeatureArray, true
+}
+
+// NewFeatureArrayReplaceTogglesReq returns new ReplaceTogglesReq from []Feature.
+func NewFeatureArrayReplaceTogglesReq(v []Feature) ReplaceTogglesReq {
+	var s ReplaceTogglesReq
+	s.SetFeatureArray(v)
+	return s
+}
+
+// SetString sets ReplaceTogglesReq to string.
+func (s *ReplaceTogglesReq) SetString(v string) {
+	s.Type = StringReplaceTogglesReq
+	s.String = v
+}
+
+// GetString returns string and true boolean if ReplaceTogglesReq is string.
+func (s ReplaceTogglesReq) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringReplaceTogglesReq returns new ReplaceTogglesReq from string.
+func NewStringReplaceTogglesReq(v string) ReplaceTogglesReq {
+	var s ReplaceTogglesReq
+	s.SetString(v)
+	return s
+}
+
 // User information.
 // Ref: #/components/schemas/User
 type User struct {

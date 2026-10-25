@@ -25,6 +25,13 @@ var behaviorTest []byte
 //go:embed tuple_behavior_test.go.txt
 var tupleBehaviorTest []byte
 
+// unionBehaviorTest is the committed assertion file for the unioncheck
+// package, written next to the generated union code only when generation
+// admits a union schema carrying an outer uniqueItems constraint.
+//
+//go:embed union_behavior_test.go.txt
+var unionBehaviorTest []byte
+
 // runtimeSchema drives the behavior test in the runtimecheck package. The
 // fixed root type name and named Entry definition make every generated
 // identifier deterministic, so the committed behavior test compiles against
@@ -66,6 +73,85 @@ const tupleSchema = `{
   "items": [ { "type": "string" }, { "type": "string" } ]
 }`
 
+// anyOfUnionSchema and oneOfUnionSchema carry an outer uniqueItems
+// constraint on a union whose array variant has its own length validator.
+// The base generator rejects both shapes as unsupported; a solution may
+// keep that rejection, but admitting a union must not silently drop the
+// outer constraint, for example because the variant's existing length
+// validators block validator propagation.
+const anyOfUnionSchema = `{
+  "type": "object",
+  "required": [ "id", "flags" ],
+  "properties": {
+    "id": { "type": "string" },
+    "flags": {
+      "uniqueItems": true,
+      "anyOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [ "name", "value" ],
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        },
+        { "type": "string" }
+      ]
+    }
+  }
+}`
+
+const oneOfUnionSchema = `{
+  "type": "object",
+  "required": [ "id", "flags" ],
+  "properties": {
+    "id": { "type": "string" },
+    "flags": {
+      "uniqueItems": true,
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [ "name", "value" ],
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        },
+        { "type": "string" }
+      ]
+    }
+  }
+}`
+
+// allOfTupleSchema merges two unique string tuples under an outer
+// uniqueItems constraint. Schema merging must not discard the tuple items
+// or the uniqueness constraint on the way to the tuple admission policy:
+// the merged schema may stay rejected like a directly written tuple, but
+// must not generate with the constraint silently dropped.
+const allOfTupleSchema = `{
+  "uniqueItems": true,
+  "allOf": [
+    {
+      "type": "array",
+      "uniqueItems": true,
+      "items": [ { "type": "string" }, { "type": "string" } ]
+    },
+    {
+      "type": "array",
+      "uniqueItems": true,
+      "items": [ { "type": "string" }, { "type": "string" } ]
+    }
+  ]
+}`
+
 // TestUniqueItemsGeneratedValidationBehavior generates the runtime schema
 // into the runtimecheck package, next to its committed behavior test, and
 // runs that package, so generated uniqueness validation is exercised through
@@ -90,33 +176,54 @@ func TestUniqueItemsGeneratedValidationBehavior(t *testing.T) {
 	output, err := command.CombinedOutput()
 	require.NoError(t, err, "go test output:\n%s", output)
 
-	// A tuple array with uniqueItems must either stay explicitly rejected,
-	// like the base generator rejects it, or be admitted with the constraint
-	// enforced at runtime. Admitting the schema while silently dropping the
+	// Shapes the base generator rejects as unsupported must either stay
+	// explicitly rejected or be admitted with the uniqueness constraint
+	// enforced at runtime. Admitting a schema while silently dropping the
 	// constraint accepts duplicate payloads the schema forbids.
 	t.Run("TupleConstraintNotLost", func(t *testing.T) {
-		defer func() {
-			if recovered := recover(); recovered != nil {
-				t.Fatalf("tuple generation panicked: %+v", recovered)
-			}
-		}()
-
-		const tupleDir = "tuplecheck"
-		require.NoError(t, os.MkdirAll(tupleDir, 0o755))
-		t.Cleanup(func() {
-			_ = os.RemoveAll(tupleDir)
-		})
-
-		err := buildStandaloneSchema(t, tupleSchema, tupleDir, "tuplecheck", "TupleRoot", "tuple_root.gen.go")
-		if err != nil {
-			// Explicit rejection preserves the constraint
-			t.Logf("tuple uniqueItems rejected: %v", err)
-			return
-		}
-
-		require.NoError(t, os.WriteFile(filepath.Join(tupleDir, "tuple_behavior_test.go"), tupleBehaviorTest, 0o644))
-		command := exec.Command("go", "test", "-count=1", "./"+tupleDir)
-		output, err := command.CombinedOutput()
-		require.NoError(t, err, "go test output:\n%s", output)
+		runConstraintGate(t, tupleSchema, "tuplecheck", "tuplecheck",
+			"TupleRoot", "tuple_root.gen.go", tupleBehaviorTest, "tuple_behavior_test.go")
 	})
+	t.Run("AnyOfUnionConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, anyOfUnionSchema, "anyofcheck", "unioncheck",
+			"UnionRoot", "union_root.gen.go", unionBehaviorTest, "union_behavior_test.go")
+	})
+	t.Run("OneOfUnionConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, oneOfUnionSchema, "oneofcheck", "unioncheck",
+			"UnionRoot", "union_root.gen.go", unionBehaviorTest, "union_behavior_test.go")
+	})
+	t.Run("AllOfTupleConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, allOfTupleSchema, "alloftuplecheck", "tuplecheck",
+			"TupleRoot", "tuple_root.gen.go", tupleBehaviorTest, "tuple_behavior_test.go")
+	})
+}
+
+// runConstraintGate generates a standalone schema that the base generator
+// rejects as unsupported. Explicit rejection preserves the constraint and
+// passes; when generation admits the schema instead, the committed
+// assertion file runs against the generated package and must pass.
+func runConstraintGate(t *testing.T, schemaData, dir, pkgName, typeName, fileName string, assertionFile []byte, assertionName string) {
+	t.Helper()
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("generation panicked: %+v", recovered)
+		}
+	}()
+
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
+
+	err := buildStandaloneSchema(t, schemaData, dir, pkgName, typeName, fileName)
+	if err != nil {
+		// Explicit rejection preserves the constraint
+		t.Logf("unsupported uniqueItems shape rejected: %v", err)
+		return
+	}
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, assertionName), assertionFile, 0o644))
+	command := exec.Command("go", "test", "-count=1", "./"+dir)
+	output, err := command.CombinedOutput()
+	require.NoError(t, err, "go test output:\n%s", output)
 }

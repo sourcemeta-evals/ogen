@@ -311,3 +311,28 @@ func (s ReplaceFlagsReq) Validate() error {
 		return errors.Errorf("invalid type %q", s.Type)
 	}
 }
+
+func (s ReplaceTogglesReq) Validate() error {
+	switch s.Type {
+	case FeatureArrayReplaceTogglesReq:
+		if s.FeatureArray == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    1,
+			MinLengthSet: true,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.FeatureArray)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validateUniqueFeature(s.FeatureArray); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	case StringReplaceTogglesReq:
+		return nil // no validation needed
+	default:
+		return errors.Errorf("invalid type %q", s.Type)
+	}
+}

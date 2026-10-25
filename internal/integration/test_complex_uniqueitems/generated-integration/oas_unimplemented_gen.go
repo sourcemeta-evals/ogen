@@ -30,3 +30,12 @@ func (UnimplementedHandler) CreateIntegrationItems(ctx context.Context, req *Cre
 func (UnimplementedHandler) ReplaceFlags(ctx context.Context, req ReplaceFlagsReq) (r *ReplaceFlagsOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
+
+// ReplaceToggles implements replaceToggles operation.
+//
+// Replace toggles, given as an exclusive unique list or a single token.
+//
+// POST /integration/toggles
+func (UnimplementedHandler) ReplaceToggles(ctx context.Context, req ReplaceTogglesReq) (r *ReplaceTogglesOK, _ error) {
+	return r, ht.ErrNotImplemented
+}

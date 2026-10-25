@@ -473,6 +473,48 @@ func TestReplaceFlagsReq_OuterUniqueItemsPreserved(t *testing.T) {
 	}
 }
 
+// oneOf builds its variants without receiving outer validators, so the outer
+// uniqueItems constraint has to be propagated into array variants explicitly
+func TestReplaceTogglesReq_OuterUniqueItemsPreserved(t *testing.T) {
+	duplicate := ReplaceTogglesReq{
+		Type: FeatureArrayReplaceTogglesReq,
+		FeatureArray: []Feature{
+			{Name: NewOptString("dark-mode")},
+			{Name: NewOptString("dark-mode")},
+		},
+	}
+	if err := duplicate.Validate(); err == nil {
+		t.Error("Expected duplicate error for repeated toggles in the array variant")
+	}
+
+	distinct := ReplaceTogglesReq{
+		Type: FeatureArrayReplaceTogglesReq,
+		FeatureArray: []Feature{
+			{Name: NewOptString("dark-mode")},
+			{Name: NewOptString("beta")},
+		},
+	}
+	if err := distinct.Validate(); err != nil {
+		t.Errorf("Expected distinct toggles to pass, got: %v", err)
+	}
+
+	empty := ReplaceTogglesReq{
+		Type:         FeatureArrayReplaceTogglesReq,
+		FeatureArray: []Feature{},
+	}
+	if err := empty.Validate(); err == nil {
+		t.Error("Expected the variant's own minItems constraint to stay enforced")
+	}
+
+	token := ReplaceTogglesReq{
+		Type:   StringReplaceTogglesReq,
+		String: "dark-mode",
+	}
+	if err := token.Validate(); err != nil {
+		t.Errorf("Expected the string variant to pass, got: %v", err)
+	}
+}
+
 // Referenced decimal schemas generate defined types over decimal.Decimal,
 // which must still compare by numeric value, so equal values written with
 // different scales are duplicates

@@ -70,6 +70,33 @@ paths:
                   stored:
                     type: integer
 
+  /integration/toggles:
+    post:
+      operationId: replaceToggles
+      summary: Replace toggles, given as an exclusive unique list or a single token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              uniqueItems: true
+              oneOf:
+                - type: array
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/Feature'
+                - type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: integer
+
 components:
   schemas:
     ComprehensiveItem:

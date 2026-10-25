@@ -20,6 +20,12 @@ type Handler interface {
 	//
 	// POST /integration/flags
 	ReplaceFlags(ctx context.Context, req ReplaceFlagsReq) (*ReplaceFlagsOK, error)
+	// ReplaceToggles implements replaceToggles operation.
+	//
+	// Replace toggles, given as an exclusive unique list or a single token.
+	//
+	// POST /integration/toggles
+	ReplaceToggles(ctx context.Context, req ReplaceTogglesReq) (*ReplaceTogglesOK, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

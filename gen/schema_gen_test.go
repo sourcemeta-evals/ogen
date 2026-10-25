@@ -310,3 +310,93 @@ func TestSchemaGenTupleUniqueItemsRejected(t *testing.T) {
 	}, false)
 	a.NoError(err)
 }
+
+func TestSchemaGenAllOfTupleUniqueItemsRejected(t *testing.T) {
+	a := require.New(t)
+	makeTuple := func() *jsonschema.Schema {
+		return &jsonschema.Schema{
+			Type: jsonschema.Array,
+			Items: []*jsonschema.Schema{
+				{Type: jsonschema.String},
+				{Type: jsonschema.String},
+			},
+			UniqueItems: true,
+		}
+	}
+
+	// Merging allOf branches must not discard tuple items or uniqueness:
+	// the merged schema has to reach the tuple uniqueItems rejection
+	s := newSchemaGen(func(ref jsonschema.Ref) (*ir.Type, bool) {
+		return nil, false
+	})
+	_, err := s.generate("Pair", &jsonschema.Schema{
+		AllOf:       []*jsonschema.Schema{makeTuple(), makeTuple()},
+		UniqueItems: true,
+	}, false)
+	var notImplemented *ErrNotImplemented
+	a.ErrorAs(err, &notImplemented)
+	a.Equal("tuple uniqueItems", notImplemented.Name)
+}
+
+func TestSchemaGenSumOuterUniqueItemsPropagated(t *testing.T) {
+	arrayVariant := func() *jsonschema.Schema {
+		return &jsonschema.Schema{
+			Type:     jsonschema.Array,
+			MinItems: func() *uint64 { n := uint64(1); return &n }(),
+			Item: &jsonschema.Schema{
+				Type: jsonschema.Object,
+				Properties: []jsonschema.Property{
+					{Name: "name", Schema: &jsonschema.Schema{Type: jsonschema.String}, Required: true},
+					{Name: "value", Schema: &jsonschema.Schema{Type: jsonschema.String}, Required: true},
+				},
+			},
+		}
+	}
+	stringVariant := func() *jsonschema.Schema {
+		return &jsonschema.Schema{Type: jsonschema.String}
+	}
+
+	for _, tt := range []struct {
+		name   string
+		schema *jsonschema.Schema
+	}{
+		{
+			name: "anyOf",
+			schema: &jsonschema.Schema{
+				AnyOf:       []*jsonschema.Schema{arrayVariant(), stringVariant()},
+				UniqueItems: true,
+			},
+		},
+		{
+			name: "oneOf",
+			schema: &jsonschema.Schema{
+				OneOf:       []*jsonschema.Schema{arrayVariant(), stringVariant()},
+				UniqueItems: true,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			a := require.New(t)
+			s := newSchemaGen(func(ref jsonschema.Ref) (*ir.Type, bool) {
+				return nil, false
+			})
+			sum, err := s.generate("Flags", tt.schema, false)
+			a.NoError(err)
+			a.Equal(ir.KindSum, sum.Kind)
+
+			var arrays int
+			for _, variant := range sum.SumOf {
+				if variant.Kind != ir.KindArray {
+					continue
+				}
+				arrays++
+				// The variant's own length validators must not block the
+				// outer uniqueness constraint from reaching the variant
+				a.True(variant.Validators.Array.UniqueItems,
+					"outer uniqueItems must reach the array variant")
+				a.True(variant.Validators.Array.MinLengthSet)
+			}
+			a.Equal(1, arrays)
+		})
+	}
+}

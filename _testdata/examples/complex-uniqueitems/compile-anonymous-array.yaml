@@ -23,7 +23,6 @@ paths:
                 type: object
                 required:
                   - key
-                  - label
                 properties:
                   key:
                     type: string

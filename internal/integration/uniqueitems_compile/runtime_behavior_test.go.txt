@@ -72,6 +72,22 @@ func TestGeneratedUniqueValidationSemantics(t *testing.T) {
 			{ID: "a", Name: "n", Payload: []byte{0x02}},
 		}))
 	})
+	t.Run("JSONLookalikeBlobsStayBytewiseDistinct", func(t *testing.T) {
+		// Named binary payloads compare by bytes. These two payloads are
+		// both valid JSON numbers with equal numeric value, so a comparison
+		// that detects JSON inside binary data and compares it semantically
+		// would wrongly report them as duplicates
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Blob: Blob("1")},
+			{ID: "a", Name: "n", Blob: Blob("1.0")},
+		}))
+	})
+	t.Run("EqualNamedBlobsAreDuplicates", func(t *testing.T) {
+		require.Error(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Blob: Blob("1")},
+			{ID: "a", Name: "n", Blob: Blob("1")},
+		}))
+	})
 	t.Run("SeparatelyParsedTimestampsAreDuplicates", func(t *testing.T) {
 		// Each parse of a numeric zone offset allocates a new location, so
 		// comparisons through == or location identity miss this duplicate

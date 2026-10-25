@@ -72,10 +72,12 @@ const runtimeSchema = `{
         "payload": { "type": "string", "format": "byte" },
         "stamp": { "type": "string", "format": "date-time" },
         "amount": { "$ref": "#/$defs/Amount" },
+        "blob": { "$ref": "#/$defs/Blob" },
         "extra": {}
       }
     },
-    "Amount": { "type": "string", "format": "decimal" }
+    "Amount": { "type": "string", "format": "decimal" },
+    "Blob": { "type": "string", "format": "byte" }
   }
 }`
 

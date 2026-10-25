@@ -1,0 +1,51 @@
+// Package refnullablecheck asserts that a uniqueItems array of objects
+// whose required field references a named array of nullable numbers
+// compiles and enforces uniqueness over the decoded numeric values. The
+// sibling generated code is produced at grading time from a schema in the
+// parent package's driver test, and only when generation accepts that
+// schema instead of rejecting it.
+package refnullablecheck
+
+import (
+	"testing"
+
+	"github.com/go-faster/jx"
+	"github.com/stretchr/testify/require"
+)
+
+// validateValue runs the generated Validate method when the type has one.
+// Solutions that enforce uniqueness while decoding need no Validate method,
+// so its absence is not a failure by itself.
+func validateValue(root *NullableRoot) error {
+	if validator, ok := any(root).(interface{ Validate() error }); ok {
+		return validator.Validate()
+	}
+	return nil
+}
+
+func decodeAndValidate(input string) error {
+	var root NullableRoot
+	if err := root.Decode(jx.DecodeStr(input)); err != nil {
+		return err
+	}
+	return validateValue(&root)
+}
+
+// TestReferencedNullableNumberArrayUniqueItemsEnforced runs only when
+// generation admits the schema: items differing only in a null score
+// against a zero score are distinct, while structurally equal items,
+// including numerically equal zero and negative zero scores, must be
+// rejected during decoding or through the public Validate method.
+func TestReferencedNullableNumberArrayUniqueItemsEnforced(t *testing.T) {
+	require.Error(t,
+		decodeAndValidate(`{"entries":[{"id":"a","scores":[null,1.5]},{"id":"a","scores":[null,1.5]}]}`),
+		"structurally equal items must fail during decoding or validation")
+	require.NoError(t,
+		decodeAndValidate(`{"entries":[{"id":"a","scores":[null]},{"id":"a","scores":[0]}]}`),
+		"a null score and a zero score are distinct element states")
+	require.NoError(t,
+		decodeAndValidate(`{"entries":[{"id":"a","scores":[1.5]},{"id":"b","scores":[1.5]}]}`))
+	require.Error(t,
+		decodeAndValidate(`{"entries":[{"id":"a","scores":[0]},{"id":"a","scores":[-0.0]}]}`),
+		"zero and negative zero scores are numerically equal, so the items are duplicates")
+}

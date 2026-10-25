@@ -40,6 +40,14 @@ var unionBehaviorTest []byte
 //go:embed ref_union_behavior_test.go.txt
 var refUnionBehaviorTest []byte
 
+// refNullableBehaviorTest is the committed assertion file for the
+// refnullablecheck package, written next to the generated code only when
+// generation admits a uniqueItems array of objects whose field references
+// a named array of nullable numbers.
+//
+//go:embed ref_nullable_behavior_test.go.txt
+var refNullableBehaviorTest []byte
+
 // runtimeSchema drives the behavior test in the runtimecheck package. The
 // fixed root type name and named Entry definition make every generated
 // identifier deterministic, so the committed behavior test compiles against
@@ -206,6 +214,38 @@ const refOneOfUnionSchema = `{
   }
 }`
 
+// refNullableArraySchema puts a uniqueItems constraint on an array of
+// objects whose required field references a named array of nullable
+// numbers. The named array becomes an alias type, so element equality and
+// hashing must classify its elements through the alias, or the generated
+// code does not compile. Uniqueness follows decoded numeric equality: a
+// null score is distinct from a zero score, and zero equals negative zero.
+const refNullableArraySchema = `{
+  "type": "object",
+  "required": [ "entries" ],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/Entry" }
+    }
+  },
+  "$defs": {
+    "Entry": {
+      "type": "object",
+      "required": [ "id", "scores" ],
+      "properties": {
+        "id": { "type": "string" },
+        "scores": { "$ref": "#/$defs/Scores" }
+      }
+    },
+    "Scores": {
+      "type": "array",
+      "items": { "type": "number", "nullable": true }
+    }
+  }
+}`
+
 // allOfTupleSchema merges two unique string tuples under an outer
 // uniqueItems constraint. Schema merging must not discard the tuple items
 // or the uniqueness constraint on the way to the tuple admission policy:
@@ -278,6 +318,10 @@ func TestUniqueItemsGeneratedValidationBehavior(t *testing.T) {
 	t.Run("ReferencedOneOfUnionConstraintNotLost", func(t *testing.T) {
 		runConstraintGate(t, refOneOfUnionSchema, "refoneofcheck", "refunioncheck",
 			"UnionRoot", "union_root.gen.go", refUnionBehaviorTest, "ref_union_behavior_test.go")
+	})
+	t.Run("ReferencedNullableNumberArrayConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, refNullableArraySchema, "refnullablecheck", "refnullablecheck",
+			"NullableRoot", "nullable_root.gen.go", refNullableBehaviorTest, "ref_nullable_behavior_test.go")
 	})
 }
 

@@ -393,7 +393,21 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 
 			// Check if this is an array of structs or nullable wrappers (either direct or wrapped)
 			isArrayOfNullable := false
-			arrayType := field.Type
+			// Referenced array schemas are aliases of their array type, so
+			// every element classification must resolve them like
+			// categorizeFieldType does, or named arrays would select
+			// emissions that do not compile for their element types
+			elemArray := dealiasedField
+			if elemArray.Kind != ir.KindArray && unwrapped != nil {
+				// Wrapped array (OptT[[]Struct] or NilT[[]Struct])
+				unwrappedArray := unwrapped
+				for unwrappedArray.Kind == ir.KindAlias && unwrappedArray.AliasTo != nil {
+					unwrappedArray = unwrappedArray.AliasTo
+				}
+				if unwrappedArray.Kind == ir.KindArray {
+					elemArray = unwrappedArray
+				}
+			}
 			classifyArrayItem := func(item *ir.Type) {
 				if item == nil {
 					return
@@ -410,11 +424,8 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 					isArrayOfStructs = true
 				}
 			}
-			if arrayType.Kind == ir.KindArray && arrayType.Item != nil {
-				classifyArrayItem(arrayType.Item)
-			} else if unwrapped != nil && unwrapped.Kind == ir.KindArray && unwrapped.Item != nil {
-				// Wrapped array (OptT[[]Struct] or NilT[[]Struct])
-				classifyArrayItem(unwrapped.Item)
+			if elemArray.Kind == ir.KindArray {
+				classifyArrayItem(elemArray.Item)
 			}
 
 			// Classify the remaining array element and map value shapes:
@@ -422,17 +433,6 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			// operator cannot compare fall back to reflect.DeepEqual
 			isArrayOfRaw := false
 			isArrayOfDeep := false
-			elemArray := arrayType
-			if elemArray.Kind != ir.KindArray && unwrapped != nil && unwrapped.Kind == ir.KindArray {
-				elemArray = unwrapped
-			}
-			// Referenced array schemas are aliases of their array type, so
-			// classification must resolve them like categorizeFieldType does,
-			// or named nested arrays would select the != emission that does
-			// not compile for slice elements
-			for elemArray.Kind == ir.KindAlias && elemArray.AliasTo != nil {
-				elemArray = elemArray.AliasTo
-			}
 			if elemArray.Kind == ir.KindArray && elemArray.Item != nil && !isArrayOfStructs {
 				elem := elemArray.Item
 				switch {

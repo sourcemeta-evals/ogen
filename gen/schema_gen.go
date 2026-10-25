@@ -238,6 +238,11 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		if item == nil || item.Type == "" {
 			return nil, fmt.Errorf("uniqueItems: empty item type")
 		}
+		if len(schema.AnyOf) > 0 || len(schema.OneOf) > 0 || len(schema.AllOf) > 0 {
+			// Composed schemas do not receive the outer constraint, so
+			// admitting them would silently drop it
+			return nil, fmt.Errorf("uniqueItems: unsupported on composed schemas")
+		}
 	}
 
 	if n := schema.XOgenName; n != "" {

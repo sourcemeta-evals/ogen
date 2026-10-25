@@ -68,21 +68,22 @@ func TestUniqueItemsAny(t *testing.T) {
 			{Values: []string{}},
 		}))
 	})
-	t.Run("NamedRawTypeReorderedMembers", func(t *testing.T) {
-		// Referenced free-form schemas generate named jx.Raw aliases, which
-		// must compare as JSON values like jx.Raw itself
-		type namedRaw jx.Raw
+	t.Run("NamedByteSlicesStayBytewise", func(t *testing.T) {
+		// A defined byte-slice type can be a generated alias of a referenced
+		// binary schema, so it compares by bytes even when the payload
+		// parses as JSON. Only jx.Raw itself compares as a JSON value
+		type namedBlob []byte
 		type holder struct {
-			ID    int
-			Extra namedRaw
+			ID   int
+			Blob namedBlob
 		}
-		require.Error(t, UniqueItemsAny([]holder{
-			{ID: 1, Extra: namedRaw(`{"a":1,"b":2}`)},
-			{ID: 1, Extra: namedRaw(`{ "b":2, "a":1 }`)},
-		}))
 		require.NoError(t, UniqueItemsAny([]holder{
-			{ID: 1, Extra: namedRaw(`{"a":1}`)},
-			{ID: 1, Extra: namedRaw(`{"a":2}`)},
+			{ID: 1, Blob: namedBlob("1")},
+			{ID: 1, Blob: namedBlob("1.0")},
+		}))
+		require.Error(t, UniqueItemsAny([]holder{
+			{ID: 1, Blob: namedBlob("1")},
+			{ID: 1, Blob: namedBlob("1")},
 		}))
 	})
 	t.Run("TimestampsCompareByInstantAndOffset", func(t *testing.T) {

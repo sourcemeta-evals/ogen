@@ -17,24 +17,19 @@ import (
 // depend on member order, whitespace and escaping, so deepEqualAny compares
 // them as JSON values instead.
 var (
-	jsonRawType   = reflect.TypeOf(jx.Raw(nil))
-	byteSliceType = reflect.TypeOf([]byte(nil))
-	timeType      = reflect.TypeOf(time.Time{})
-	decimalType   = reflect.TypeOf(decimal.Decimal{})
+	jsonRawType = reflect.TypeOf(jx.Raw(nil))
+	timeType    = reflect.TypeOf(time.Time{})
+	decimalType = reflect.TypeOf(decimal.Decimal{})
 )
 
-// isJSONRawType reports whether a reflect type holds raw JSON bytes: jx.Raw
-// itself, or a defined byte-slice type such as a generated alias of a
-// referenced free-form schema. Plain []byte stays bytewise, because it
-// carries decoded binary data, not JSON.
+// isJSONRawType reports whether a reflect type holds raw JSON bytes. Only
+// jx.Raw itself qualifies: a defined byte-slice type can be a generated
+// alias of a referenced binary schema, and reflection cannot tell it apart
+// from an alias of a free-form schema, so treating it as JSON would
+// conflate distinct binary payloads that happen to parse as JSON. Defined
+// byte slices therefore stay bytewise.
 func isJSONRawType(t reflect.Type) bool {
-	if t == jsonRawType {
-		return true
-	}
-	return t != byteSliceType &&
-		t.Kind() == reflect.Slice &&
-		t.Elem().Kind() == reflect.Uint8 &&
-		t.ConvertibleTo(jsonRawType)
+	return t == jsonRawType
 }
 
 // errExactNumber reports a raw JSON number the comparison cannot represent

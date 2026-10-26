@@ -1059,3 +1059,34 @@ func TestCategorizeFieldTypeWrapperLikeStructNames(t *testing.T) {
 	require.Equal(t, ir.FieldTypeOptional, categorizeFieldType(optNilWrapper))
 	require.True(t, isOptionalNullable(optNilWrapper))
 }
+
+func TestWriteFieldComparison_PointerToWrapper(t *testing.T) {
+	var b strings.Builder
+	g := &Generator{}
+	g.writeFieldComparison(&b, ir.FieldEqualitySpec{
+		FieldName:          "Next",
+		FieldType:          ir.FieldTypePointer,
+		GoType:             "*OptNode",
+		IsNested:           true,
+		IsPointerToWrapper: true,
+	}, true)
+	output := b.String()
+	require.Contains(t, output, "if (a.Next == nil) != (b.Next == nil)")
+	require.Contains(t, output, "if !a.Next.EqualDepth(*b.Next, depth+1)")
+	require.NotContains(t, output, "a.Next.Equal(*b.Next")
+}
+
+func TestWriteFieldHash_PointerToWrapper(t *testing.T) {
+	var b strings.Builder
+	g := &Generator{}
+	g.writeFieldHash(&b, ir.FieldHashSpec{
+		FieldName:          "Next",
+		FieldType:          ir.FieldTypePointer,
+		GoType:             "*OptNode",
+		IsNested:           true,
+		IsPointerToWrapper: true,
+	}, true)
+	output := b.String()
+	require.Contains(t, output, "// Wrapper pointee excluded from the hash")
+	require.NotContains(t, output, "a.Next.Hash")
+}

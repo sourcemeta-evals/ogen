@@ -256,8 +256,17 @@ func (g *Generator) writeFieldComparison(b *strings.Builder, field ir.FieldEqual
 		fmt.Fprintf(b, "\t}\n")
 		fmt.Fprintf(b, "\tif a.%s != nil {\n", field.FieldName)
 		if field.IsNested {
-			// Pointer to a nested object - compare via Equal() on the pointee
-			if hasDepth {
+			// Pointer to a nested object - compare via Equal() on the pointee.
+			// Recursion boxing yields pointers to Opt wrappers, which carry
+			// EqualDepth instead of Equal, continuing the shared recursion
+			// budget like the reflect-based walker does
+			if field.IsPointerToWrapper {
+				if hasDepth {
+					fmt.Fprintf(b, "\t\tif !a.%s.EqualDepth(*b.%s, depth+1) {\n", field.FieldName, field.FieldName)
+				} else {
+					fmt.Fprintf(b, "\t\tif !a.%s.EqualDepth(*b.%s, 0) {\n", field.FieldName, field.FieldName)
+				}
+			} else if hasDepth {
 				fmt.Fprintf(b, "\t\tif !a.%s.Equal(*b.%s, depth+1) {\n", field.FieldName, field.FieldName)
 			} else {
 				fmt.Fprintf(b, "\t\tif !a.%s.Equal(*b.%s) {\n", field.FieldName, field.FieldName)
@@ -401,6 +410,7 @@ func (g *Generator) generateHashMethod(spec *ir.EqualityMethodSpec, pkgName stri
 			FieldType:            field.FieldType,
 			GoType:               field.GoType,
 			IsNested:             field.IsNested,
+			IsPointerToWrapper:   field.IsPointerToWrapper,
 			IsArrayOfStructs:     field.IsArrayOfStructs,
 			IsArrayOfNullable:    field.IsArrayOfNullable,
 			IsMapOfStructs:       field.IsMapOfStructs,
@@ -539,6 +549,11 @@ func (g *Generator) writeFieldHash(b *strings.Builder, field ir.FieldHashSpec, h
 		fmt.Fprintf(b, "\tif a.%s != nil {\n", field.FieldName)
 		fmt.Fprintf(b, "\t\th.Write([]byte{1})\n")
 		switch {
+		case field.IsPointerToWrapper:
+			// Wrappers have no Hash method and their inactive payload must
+			// not split equal values into different buckets, so only the
+			// presence bytes already written participate
+			fmt.Fprintf(b, "\t\t// Wrapper pointee excluded from the hash: only its presence participates\n")
 		case field.IsNested:
 			// Pointer to a nested object - call Hash()
 			fmt.Fprintf(b, "\t\tnestedHash%s := %s\n", field.FieldName, nestedHashCall("a."+field.FieldName))

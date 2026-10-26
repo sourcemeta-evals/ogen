@@ -30,6 +30,12 @@ type FieldEqualitySpec struct {
 	// IsNested indicates if this field is a nested object requiring recursive Equal() call
 	IsNested bool
 
+	// IsPointerToWrapper indicates a pointer field whose immediate pointee
+	// is a generic Opt or Nil wrapper, produced when recursion boxing turns
+	// an optional nullable self-reference into a pointer. Wrappers carry
+	// EqualDepth instead of Equal and have no Hash method
+	IsPointerToWrapper bool
+
 	// IsMap indicates if the field (or wrapped value for Optional/Nullable) is a map type
 	IsMap bool
 
@@ -162,6 +168,11 @@ type FieldHashSpec struct {
 
 	// IsNested indicates if this field has a Hash() method
 	IsNested bool
+
+	// IsPointerToWrapper indicates a pointer field whose immediate pointee
+	// is a generic Opt or Nil wrapper, which has no Hash method, so only
+	// the pointer's presence participates in the hash
+	IsPointerToWrapper bool
 
 	// IsArrayOfStructs indicates array elements provide their own Hash() method
 	IsArrayOfStructs bool

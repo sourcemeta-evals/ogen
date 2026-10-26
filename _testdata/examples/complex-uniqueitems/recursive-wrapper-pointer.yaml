@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: Recursive Wrapper Pointer UniqueItems Compile Test
+  version: 1.0.0
+  description: |
+    A unique array of nodes whose optional nullable self-reference boxes
+    into a pointer to an Opt wrapper. A separate plain optional reference
+    declares that wrapper type, so generated comparison code must reach the
+    wrapped node through the wrapper's state-aware EqualDepth method
+    instead of struct methods the wrapper does not have.
+
+paths:
+  /nodes:
+    post:
+      operationId: addNodes
+      summary: Store nodes with recursive optional nullable references
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              uniqueItems: true
+              items:
+                $ref: '#/components/schemas/Node'
+      responses:
+        '200':
+          description: Success
+  /holders:
+    post:
+      operationId: addHolder
+      summary: Store a holder whose optional reference declares the wrapper
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Holder'
+      responses:
+        '200':
+          description: Success
+
+components:
+  schemas:
+    Node:
+      type: object
+      properties:
+        id:
+          type: string
+        next:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Node'
+    Holder:
+      type: object
+      properties:
+        maybe:
+          $ref: '#/components/schemas/Node'

@@ -195,7 +195,9 @@ func GenerateSchema(schema *jsonschema.Schema, fs FileSystem, opts GenerateSchem
 	// to generated validateUnique functions, so this entry point must emit
 	// the Equal and Hash methods and the uniqueness validators too.
 	equality := &Generator{tstorage: ctx.local}
-	equality.collectEqualitySpecs()
+	if err := equality.collectEqualitySpecs(); err != nil {
+		return errors.Wrap(err, "unique items equality")
+	}
 	if len(equality.equalitySpecs) > 0 {
 		if err := equality.generateEqualityMethodsWithFS(fs, opts.PkgName); err != nil {
 			return errors.Wrap(err, "generate equality methods")

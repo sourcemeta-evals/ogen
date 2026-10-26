@@ -3,6 +3,8 @@ package gen
 import (
 	"sort"
 
+	"github.com/go-faster/errors"
+
 	"github.com/ogen-go/ogen/gen/ir"
 )
 
@@ -13,8 +15,10 @@ const (
 )
 
 // collectEqualitySpecs identifies types that require Equal() and Hash() methods
-// for complex uniqueItems validation.
-func (g *Generator) collectEqualitySpecs() {
+// for complex uniqueItems validation. It rejects schemas whose property
+// names collide with the generated method names, because the emitted
+// methods could not compile alongside such fields.
+func (g *Generator) collectEqualitySpecs() error {
 	// Iterate through all types to find arrays with complex uniqueItems.
 	// Operation and webhook payloads are walked as additional roots because
 	// anonymous request or response arrays are not stored as named types.
@@ -41,6 +45,22 @@ func (g *Generator) collectEqualitySpecs() {
 	sort.Slice(g.wrapperTypes, func(i, j int) bool {
 		return g.wrapperTypes[i].Name < g.wrapperTypes[j].Name
 	})
+
+	// A schema property that maps to a Go field named like a generated
+	// comparison method would make the emitted methods collide with that
+	// field, producing code that does not compile, so such schemas are
+	// rejected with an explicit error instead
+	for _, spec := range g.equalitySpecs {
+		for _, field := range spec.Fields {
+			if field.FieldName == "Equal" || field.FieldName == "Hash" {
+				return errors.Errorf(
+					"uniqueItems: field %s.%s collides with the generated %s comparison method",
+					spec.TypeName, field.FieldName, field.FieldName,
+				)
+			}
+		}
+	}
+	return nil
 }
 
 // collectFromOperation walks every type reachable from an operation's
@@ -524,10 +544,13 @@ func (g *Generator) createEqualityMethodSpec(t *ir.Type) *ir.EqualityMethodSpec 
 			}
 
 			fieldSpec := ir.FieldEqualitySpec{
-				FieldName:              field.Name,
-				FieldType:              categorizeFieldType(field.Type),
-				GoType:                 goType,
-				IsNested:               isNestedObject(field.Type),
+				FieldName: field.Name,
+				FieldType: categorizeFieldType(field.Type),
+				GoType:    goType,
+				IsNested:  isNestedObject(field.Type),
+				IsPointerToWrapper: field.Type.Kind == ir.KindPointer &&
+					field.Type.PointerTo != nil &&
+					field.Type.PointerTo.Kind == ir.KindGeneric,
 				IsMap:                  isMap,
 				IsMapOfStructs:         isMapOfStructs,
 				IsMapOfFloats:          isMapOfFloats,

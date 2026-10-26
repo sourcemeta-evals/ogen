@@ -73,6 +73,10 @@ const runtimeSchema = `{
         "stamp": { "type": "string", "format": "date-time" },
         "amount": { "$ref": "#/$defs/Amount" },
         "blob": { "$ref": "#/$defs/Blob" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "extra": {}
       }
     },

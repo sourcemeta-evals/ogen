@@ -88,6 +88,29 @@ func TestGeneratedUniqueValidationSemantics(t *testing.T) {
 			{ID: "a", Name: "n", Blob: Blob("1")},
 		}))
 	})
+	t.Run("FailedComparisonsDoNotContaminateLaterPairs", func(t *testing.T) {
+		// third shares its tags backing array with second, so comparing
+		// first against second and then first against third revisits the
+		// same slice pair. A comparator that records a visited slice pair
+		// before its contents are compared would wrongly report first and
+		// third as duplicates in some validation order
+		first := Entry{ID: "a", Name: "n", Tags: []string{"x"}}
+		second := Entry{ID: "a", Name: "n", Tags: []string{"y"}, Extra: jx.Raw(`1`)}
+		third := second
+		third.Extra = nil
+		distinct := []Entry{first, second, third}
+		for _, order := range [][3]int{
+			{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0},
+		} {
+			require.NoError(t, validateEntries([]Entry{
+				distinct[order[0]], distinct[order[1]], distinct[order[2]],
+			}), "three distinct records must validate in order %v", order)
+		}
+		require.Error(t, validateEntries([]Entry{
+			first, second, third,
+			{ID: "a", Name: "n", Tags: []string{"x"}},
+		}), "an independently built copy of the first record is a duplicate")
+	})
 	t.Run("SeparatelyParsedTimestampsAreDuplicates", func(t *testing.T) {
 		// Each parse of a numeric zone offset allocates a new location, so
 		// comparisons through == or location identity miss this duplicate

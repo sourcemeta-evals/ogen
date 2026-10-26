@@ -9,6 +9,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testNamedBinary mirrors a generated alias of a referenced binary schema:
+// a defined byte-slice type whose Encode writes a base64 string.
+type testNamedBinary []byte
+
+func (s testNamedBinary) Encode(e *jx.Encoder) {
+	e.Base64([]byte(s))
+}
+
+// testNamedRaw mirrors a generated alias of a referenced free-form schema:
+// a defined byte-slice type whose Encode writes its raw JSON verbatim.
+type testNamedRaw jx.Raw
+
+func (s testNamedRaw) Encode(e *jx.Encoder) {
+	if len(s) != 0 {
+		e.Raw(jx.Raw(s))
+	}
+}
+
 func TestUniqueItemsAny(t *testing.T) {
 	type thing struct {
 		ID    int
@@ -69,9 +87,9 @@ func TestUniqueItemsAny(t *testing.T) {
 		}))
 	})
 	t.Run("NamedByteSlicesStayBytewise", func(t *testing.T) {
-		// A defined byte-slice type can be a generated alias of a referenced
-		// binary schema, so it compares by bytes even when the payload
-		// parses as JSON. Only jx.Raw itself compares as a JSON value
+		// A defined byte-slice type without a generated encoding can be an
+		// alias of a referenced binary schema, so it compares by bytes even
+		// when the payload parses as JSON
 		type namedBlob []byte
 		type holder struct {
 			ID   int
@@ -84,6 +102,44 @@ func TestUniqueItemsAny(t *testing.T) {
 		require.Error(t, UniqueItemsAny([]holder{
 			{ID: 1, Blob: namedBlob("1")},
 			{ID: 1, Blob: namedBlob("1")},
+		}))
+	})
+	t.Run("NamedBinaryAliasesStayBytewise", func(t *testing.T) {
+		// A generated binary alias encodes to a base64 string, so comparing
+		// encodings keeps bytewise-distinct payloads distinct even when both
+		// parse as equivalent JSON
+		type holder struct {
+			ID   int
+			Blob testNamedBinary
+		}
+		require.NoError(t, UniqueItemsAny([]holder{
+			{ID: 1, Blob: testNamedBinary("1")},
+			{ID: 1, Blob: testNamedBinary("1.0")},
+		}))
+		require.Error(t, UniqueItemsAny([]holder{
+			{ID: 1, Blob: testNamedBinary("1")},
+			{ID: 1, Blob: testNamedBinary("1")},
+		}))
+	})
+	t.Run("NamedRawAliasesCompareAsJSON", func(t *testing.T) {
+		// A generated free-form alias encodes its raw JSON verbatim, so
+		// member order, whitespace and numeric notation do not affect
+		// equality, exactly like a plain jx.Raw field
+		type holder struct {
+			ID   int
+			Free testNamedRaw
+		}
+		require.Error(t, UniqueItemsAny([]holder{
+			{ID: 1, Free: testNamedRaw(`{"a":1,"b":2}`)},
+			{ID: 1, Free: testNamedRaw(`{ "b":2, "a":1 }`)},
+		}))
+		require.NoError(t, UniqueItemsAny([]holder{
+			{ID: 1, Free: testNamedRaw(`{"a":1}`)},
+			{ID: 1, Free: testNamedRaw(`{"a":2}`)},
+		}))
+		require.NoError(t, UniqueItemsAny([]holder{
+			{ID: 1},
+			{ID: 1, Free: testNamedRaw(`null`)},
 		}))
 	})
 	t.Run("TimestampsCompareByInstantAndOffset", func(t *testing.T) {

@@ -25,9 +25,10 @@ var (
 // isJSONRawType reports whether a reflect type holds raw JSON bytes. Only
 // jx.Raw itself qualifies: a defined byte-slice type can be a generated
 // alias of a referenced binary schema, and reflection cannot tell it apart
-// from an alias of a free-form schema, so treating it as JSON would
+// from an alias of a free-form schema, so treating its bytes as JSON would
 // conflate distinct binary payloads that happen to parse as JSON. Defined
-// byte slices therefore stay bytewise.
+// byte slices carrying a generated Encode method are compared through
+// their JSON encoding in deepEqualValue instead; the rest stay bytewise.
 func isJSONRawType(t reflect.Type) bool {
 	return t == jsonRawType
 }
@@ -52,6 +53,24 @@ func deepEqualValue(a, b reflect.Value) (bool, error) {
 	}
 	if isJSONRawType(a.Type()) {
 		return equalJSONRaw(a.Bytes(), b.Bytes())
+	}
+	if a.Kind() == reflect.Slice && a.Type().Elem().Kind() == reflect.Uint8 {
+		if left, ok := a.Interface().(interface{ Encode(*jx.Encoder) }); ok {
+			// Generated named types over byte slices carry their own JSON
+			// encoding: an alias of a referenced free-form schema encodes
+			// its raw JSON verbatim while an alias of a referenced binary
+			// schema encodes a base64 string, so comparing the encodings as
+			// JSON values preserves both semantics, which reflection on the
+			// byte slice alone cannot tell apart
+			if a.IsNil() || b.IsNil() {
+				return a.IsNil() == b.IsNil(), nil
+			}
+			right := b.Interface().(interface{ Encode(*jx.Encoder) })
+			var leftEncoded, rightEncoded jx.Encoder
+			left.Encode(&leftEncoded)
+			right.Encode(&rightEncoded)
+			return equalJSONRaw(leftEncoded.Bytes(), rightEncoded.Bytes())
+		}
 	}
 	if a.Type() == timeType {
 		// == and reflect.DeepEqual also compare the location pointer, so

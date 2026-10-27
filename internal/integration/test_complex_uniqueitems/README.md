@@ -251,7 +251,8 @@ Six test suites cover the feature:
 
 ## Performance
 
-All validation runs in O(n) time:
+Struct items validate in O(n) time through hash buckets; the pairwise
+fallback helpers are O(n²) in the worst case:
 
 | Items | Time | Benchmark |
 |-------|------|-----------|

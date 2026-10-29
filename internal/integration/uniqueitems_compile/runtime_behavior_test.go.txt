@@ -5,6 +5,7 @@
 package runtimecheck
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -52,6 +53,21 @@ func TestGeneratedUniqueValidationSemantics(t *testing.T) {
 			{ID: "a", Name: "n"},
 			{ID: "b", Name: "n"},
 			{ID: "a", Name: "n"},
+		}))
+	})
+	t.Run("SignedZeroScoresAreDuplicates", func(t *testing.T) {
+		// 0 and -0 are numerically equal, so entries differing only in the
+		// sign of a zero score are duplicates. A hash built from raw float
+		// bits would place them in different buckets and miss the duplicate
+		require.Error(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Scores: NewOptEntryScores(EntryScores{"x": 0})},
+			{ID: "a", Name: "n", Scores: NewOptEntryScores(EntryScores{"x": math.Copysign(0, -1)})},
+		}))
+	})
+	t.Run("DifferentScoreValuesStayDistinct", func(t *testing.T) {
+		require.NoError(t, validateEntries([]Entry{
+			{ID: "a", Name: "n", Scores: NewOptEntryScores(EntryScores{"x": 1})},
+			{ID: "a", Name: "n", Scores: NewOptEntryScores(EntryScores{"x": 2})},
 		}))
 	})
 	t.Run("AbsentVersusEmptyPayloadStaysDistinct", func(t *testing.T) {

@@ -71,6 +71,10 @@ const runtimeSchema = `{
         "name": { "type": "string" },
         "payload": { "type": "string", "format": "byte" },
         "stamp": { "type": "string", "format": "date-time" },
+        "scores": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
         "amount": { "$ref": "#/$defs/Amount" },
         "blob": { "$ref": "#/$defs/Blob" },
         "tags": {

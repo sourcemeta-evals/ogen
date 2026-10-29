@@ -1,0 +1,48 @@
+// Package nestedunioncheck asserts that an outer uniqueItems constraint on
+// an admitted union keeps being enforced when the array branch sits inside
+// a nested union variant. The sibling generated code is produced at grading
+// time from a nested union schema in the parent package's driver test, and
+// only when generation accepts that schema instead of rejecting it.
+package nestedunioncheck
+
+import (
+	"testing"
+
+	"github.com/go-faster/jx"
+	"github.com/stretchr/testify/require"
+)
+
+// validateValue runs the generated Validate method when the type has one.
+// Solutions that enforce uniqueness while decoding need no Validate method,
+// so its absence is not a failure by itself.
+func validateValue(root *NestedUnionRoot) error {
+	if validator, ok := any(root).(interface{ Validate() error }); ok {
+		return validator.Validate()
+	}
+	return nil
+}
+
+func decodeAndValidate(input string) error {
+	var root NestedUnionRoot
+	if err := root.Decode(jx.DecodeStr(input)); err != nil {
+		return err
+	}
+	return validateValue(&root)
+}
+
+// TestNestedUnionOuterUniqueItemsEnforced runs only when generation admits
+// the nested union schema: the outer uniqueItems constraint must reject
+// repeated elements of the nested array branch during decoding or through
+// the public Validate method, and must accept distinct elements as well as
+// the string and boolean variants.
+func TestNestedUnionOuterUniqueItemsEnforced(t *testing.T) {
+	require.Error(t,
+		decodeAndValidate(`{"id":"a","flags":[{"name":"x","value":"y"},{"name":"x","value":"y"}]}`),
+		"duplicate nested array branch elements must fail during decoding or validation")
+	require.NoError(t,
+		decodeAndValidate(`{"id":"a","flags":[{"name":"x","value":"y"},{"name":"x","value":"z"}]}`))
+	require.NoError(t,
+		decodeAndValidate(`{"id":"a","flags":"token"}`))
+	require.NoError(t,
+		decodeAndValidate(`{"id":"a","flags":true}`))
+}

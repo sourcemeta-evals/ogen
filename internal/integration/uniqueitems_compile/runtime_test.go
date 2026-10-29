@@ -48,6 +48,14 @@ var refUnionBehaviorTest []byte
 //go:embed ref_nullable_behavior_test.go.txt
 var refNullableBehaviorTest []byte
 
+// nestedUnionBehaviorTest is the committed assertion file for the
+// nestedunioncheck package, written next to the generated union code only
+// when generation admits a union whose variant is itself a union carrying
+// an array branch under an outer uniqueItems constraint.
+//
+//go:embed nested_union_behavior_test.go.txt
+var nestedUnionBehaviorTest []byte
+
 // runtimeSchema drives the behavior test in the runtimecheck package. The
 // fixed root type name and named Entry definition make every generated
 // identifier deterministic, so the committed behavior test compiles against
@@ -224,6 +232,74 @@ const refOneOfUnionSchema = `{
   }
 }`
 
+// nestedAnyOfUnionSchema and nestedOneOfUnionSchema carry an outer
+// uniqueItems constraint on a union whose first variant is itself a union
+// of an array of objects and a string, alongside a boolean variant. The
+// nested union has no single JSON type, so a generator that checks only
+// direct array variants or aliased array variants can admit the schema
+// while the constraint never reaches the nested array branch. A solution
+// may reject these shapes as unsupported, but admitting them must enforce
+// the outer constraint on the nested array branch.
+const nestedAnyOfUnionSchema = `{
+  "type": "object",
+  "required": [ "id", "flags" ],
+  "properties": {
+    "id": { "type": "string" },
+    "flags": {
+      "uniqueItems": true,
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [ "name", "value" ],
+                "properties": {
+                  "name": { "type": "string" },
+                  "value": { "type": "string" }
+                }
+              }
+            },
+            { "type": "string" }
+          ]
+        },
+        { "type": "boolean" }
+      ]
+    }
+  }
+}`
+
+const nestedOneOfUnionSchema = `{
+  "type": "object",
+  "required": [ "id", "flags" ],
+  "properties": {
+    "id": { "type": "string" },
+    "flags": {
+      "uniqueItems": true,
+      "oneOf": [
+        {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [ "name", "value" ],
+                "properties": {
+                  "name": { "type": "string" },
+                  "value": { "type": "string" }
+                }
+              }
+            },
+            { "type": "string" }
+          ]
+        },
+        { "type": "boolean" }
+      ]
+    }
+  }
+}`
+
 // refNullableArraySchema puts a uniqueItems constraint on an array of
 // objects whose required field references a named array of nullable
 // numbers. The named array becomes an alias type, so element equality and
@@ -328,6 +404,14 @@ func TestUniqueItemsGeneratedValidationBehavior(t *testing.T) {
 	t.Run("ReferencedOneOfUnionConstraintNotLost", func(t *testing.T) {
 		runConstraintGate(t, refOneOfUnionSchema, "refoneofcheck", "refunioncheck",
 			"UnionRoot", "union_root.gen.go", refUnionBehaviorTest, "ref_union_behavior_test.go")
+	})
+	t.Run("NestedAnyOfUnionConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, nestedAnyOfUnionSchema, "nestedanyofcheck", "nestedunioncheck",
+			"NestedUnionRoot", "nested_union_root.gen.go", nestedUnionBehaviorTest, "nested_union_behavior_test.go")
+	})
+	t.Run("NestedOneOfUnionConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, nestedOneOfUnionSchema, "nestedoneofcheck", "nestedunioncheck",
+			"NestedUnionRoot", "nested_union_root.gen.go", nestedUnionBehaviorTest, "nested_union_behavior_test.go")
 	})
 	t.Run("ReferencedNullableNumberArrayConstraintNotLost", func(t *testing.T) {
 		runConstraintGate(t, refNullableArraySchema, "refnullablecheck", "refnullablecheck",

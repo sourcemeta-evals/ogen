@@ -17,6 +17,21 @@ import (
 	"github.com/ogen-go/ogen/location"
 )
 
+// sumCarriesArray reports whether a nested sum variant can decode a JSON
+// array. jsonType returns an empty string for sums, so the aliased-array
+// rejection in the uniqueness loops never sees these variants directly.
+func sumCarriesArray(t *ir.Type) bool {
+	if !t.IsSum() {
+		return false
+	}
+	for _, variant := range t.SumOf {
+		if variant.JSON().Type() == "Array" || sumCarriesArray(variant) {
+			return true
+		}
+	}
+	return false
+}
+
 func canUseTypeDiscriminator(sum []*ir.Type, isOneOf bool) bool {
 	var (
 		// Collect map of variant kinds.
@@ -274,6 +289,13 @@ func (g *schemaGen) anyOf(name string, schema *jsonschema.Schema, side bool) (*i
 				// uses of the shared named type, so keep the shape rejected
 				return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
 			}
+			if schema.UniqueItems && sumCarriesArray(v) {
+				// A nested sum variant hides its array branch behind an empty
+				// JSON type, so the outer uniqueness constraint cannot reach
+				// it; keep the shape rejected rather than admit it with the
+				// constraint silently dropped
+				return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
+			}
 			switch v.Kind {
 			case ir.KindPrimitive, ir.KindEnum:
 				switch {
@@ -441,6 +463,14 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*i
 						// to an aliased array variant without leaking it into
 						// unrelated uses of the shared named type, so keep
 						// the shape rejected
+						return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
+					}
+					if sumCarriesArray(v) {
+						// A nested sum variant hides its array branch behind
+						// an empty JSON type, so the outer uniqueness
+						// constraint cannot reach it; keep the shape rejected
+						// rather than admit it with the constraint silently
+						// dropped
 						return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
 					}
 					continue

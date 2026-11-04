@@ -619,6 +619,13 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 
 		return g.regtype(name, t), nil
 	case jsonschema.Empty:
+		if schema.UniqueItems {
+			// A typeless schema admits any JSON value, including arrays, so
+			// the uniqueness constraint is live, but the generated raw type
+			// carries no validators; keep the shape rejected like the base
+			// generator did rather than admit it with the constraint dropped
+			return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
+		}
 		g.log.Info("Type is not defined, using any",
 			zapPosition(schema),
 			zap.String("name", name),

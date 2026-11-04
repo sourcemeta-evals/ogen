@@ -1,0 +1,45 @@
+// Package freeformcheck asserts that an admitted typeless schema carrying a
+// uniqueItems constraint still enforces the constraint on array values. The
+// sibling generated code is produced at grading time from the freeform
+// schema in the parent package's driver test, and only when generation
+// accepts that schema instead of rejecting it.
+package freeformcheck
+
+import (
+	"testing"
+
+	"github.com/go-faster/jx"
+	"github.com/stretchr/testify/require"
+)
+
+// validateValue runs the generated Validate method when the type has one.
+// Solutions that enforce uniqueness while decoding need no Validate method,
+// so its absence is not a failure by itself.
+func validateValue(root *FreeformRoot) error {
+	if validator, ok := any(root).(interface{ Validate() error }); ok {
+		return validator.Validate()
+	}
+	return nil
+}
+
+func decodeAndValidate(input string) error {
+	var root FreeformRoot
+	if err := root.Decode(jx.DecodeStr(input)); err != nil {
+		return err
+	}
+	return validateValue(&root)
+}
+
+// TestFreeformUniqueItemsEnforced runs only when generation admits the
+// typeless uniqueItems schema: array values with repeated elements must
+// fail during decoding or through the public Validate method, while arrays
+// of distinct elements and non-array values must stay accepted, because
+// uniqueItems constrains only array instances.
+func TestFreeformUniqueItemsEnforced(t *testing.T) {
+	require.Error(t,
+		decodeAndValidate(`[1, 1]`),
+		"duplicate array elements must fail during decoding or validation")
+	require.NoError(t, decodeAndValidate(`[1, 2]`))
+	require.NoError(t, decodeAndValidate(`"x"`))
+	require.NoError(t, decodeAndValidate(`{"a": 1}`))
+}

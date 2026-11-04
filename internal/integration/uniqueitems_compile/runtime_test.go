@@ -56,6 +56,13 @@ var refNullableBehaviorTest []byte
 //go:embed nested_union_behavior_test.go.txt
 var nestedUnionBehaviorTest []byte
 
+// freeformBehaviorTest is the committed assertion file for the
+// freeformcheck package, written next to the generated code only when
+// generation admits a typeless schema carrying a uniqueItems constraint.
+//
+//go:embed freeform_behavior_test.go.txt
+var freeformBehaviorTest []byte
+
 // runtimeSchema drives the behavior test in the runtimecheck package. The
 // fixed root type name and named Entry definition make every generated
 // identifier deterministic, so the committed behavior test compiles against
@@ -332,6 +339,14 @@ const refNullableArraySchema = `{
   }
 }`
 
+// freeformSchema carries a uniqueItems constraint on a schema with no
+// declared type. A typeless schema admits any JSON value, including arrays,
+// so the constraint is live; a generator that maps typeless schemas to a
+// raw JSON type without consulting uniqueItems admits the schema while the
+// constraint silently stops applying. A solution may reject this shape as
+// unsupported, but admitting it must enforce uniqueness on array values.
+const freeformSchema = `{ "uniqueItems": true }`
+
 // allOfTupleSchema merges two unique string tuples under an outer
 // uniqueItems constraint. Schema merging must not discard the tuple items
 // or the uniqueness constraint on the way to the tuple admission policy:
@@ -416,6 +431,10 @@ func TestUniqueItemsGeneratedValidationBehavior(t *testing.T) {
 	t.Run("ReferencedNullableNumberArrayConstraintNotLost", func(t *testing.T) {
 		runConstraintGate(t, refNullableArraySchema, "refnullablecheck", "refnullablecheck",
 			"NullableRoot", "nullable_root.gen.go", refNullableBehaviorTest, "ref_nullable_behavior_test.go")
+	})
+	t.Run("FreeformConstraintNotLost", func(t *testing.T) {
+		runConstraintGate(t, freeformSchema, "freeformcheck", "freeformcheck",
+			"FreeformRoot", "freeform_root.gen.go", freeformBehaviorTest, "freeform_behavior_test.go")
 	})
 }
 

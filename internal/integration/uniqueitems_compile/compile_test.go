@@ -136,6 +136,10 @@ func TestUniqueItemsGeneratedCodeCompiles(t *testing.T) {
 		defer guard(t)
 		buildDir(t, generateService(t, "compile-anonymous-array.yaml"))
 	})
+	t.Run("ResponseOnlyArray", func(t *testing.T) {
+		defer guard(t)
+		buildDir(t, generateService(t, "compile-response-array.yaml"))
+	})
 	t.Run("RecursiveAdditionalProperties", func(t *testing.T) {
 		defer guard(t)
 		buildDir(t, generateService(t, "compile-recursive-props.yaml"))
